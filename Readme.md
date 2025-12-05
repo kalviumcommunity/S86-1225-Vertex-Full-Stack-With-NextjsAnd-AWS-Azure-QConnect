@@ -1,4 +1,4 @@
-QConnect – A Lightweight Digital Queue Management System
+# QConnect – A Lightweight Digital Queue Management System
 
 QConnect is a streamlined, cost-effective digital queue management solution designed to help hospitals in Tier-2 and Tier-3 cities modernize patient flow without investing in expensive infrastructure. The system enables patients to join virtual queues and receive real-time updates, significantly reducing on-site congestion and improving operational efficiency.
 
