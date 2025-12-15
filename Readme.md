@@ -59,3 +59,5 @@ Member 3
 📄 License
 
 This project is licensed under the MIT License.
+
+![alt text](local-app-running.png)
