@@ -50,11 +50,11 @@ npm start
 
 🧑‍💼 Team
 
-Member 1
+Member 1 - kishore
 
-Member 2
+Member 2 - eswar
 
-Member 3
+Member 3 - bhanu prasad
 
 📄 License
 
