@@ -48,7 +48,7 @@ async function main() {
   // Now demonstrate rollback on error
   try {
     await bookAppointmentWithError(queue.id, user.id);
-  } catch (e: any) {
+  } catch (e: any ) {
     console.log("Expected error during bookingWithError:", e.message);
   }
 
