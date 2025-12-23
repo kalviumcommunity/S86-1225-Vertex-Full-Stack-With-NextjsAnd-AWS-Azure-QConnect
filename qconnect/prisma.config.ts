@@ -1,7 +1,11 @@
-import { defineConfig } from "prisma/config";
+/**
+ * Deprecated: seed logic moved to `prisma/seed.ts`
+ *
+ * Use `npx prisma db seed` or `npm run db:seed` to run the canonical seed script.
+ * This file was left in place as a reference but should not be used directly.
+ */
 
-export default defineConfig({
-  datasource: {
-    url: "postgresql://postgres:password@localhost:5432/mydb",
-  },
-});
+// Intentionally empty - see `prisma/seed.ts` for seed implementation
+
+export {};
+
