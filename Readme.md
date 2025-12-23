@@ -61,3 +61,66 @@ Member 3
 This project is licensed under the MIT License.
 
 ![alt text](local-app-running.png)
+
+## Docker & Docker Compose Setup
+
+This project uses Docker and Docker Compose to run the full stack locally.
+
+### Services
+- Next.js App – http://localhost:3000
+- PostgreSQL – Port 5432
+- Redis – Port 6379
+
+### Run Locally
+```bash
+docker-compose up --build
+
+
+## PostgreSQL Schema Design
+
+### Entities
+User, Doctor, Queue, Appointment
+
+### Relationships
+- User → Appointment (1:N)
+- Doctor → Queue (1:N)
+- Queue → Appointment (1:N)
+
+### Constraints
+- Unique email for users
+- Unique token per queue
+- Cascading deletes
+
+### Normalization
+- 1NF: Atomic attributes
+- 2NF: No partial dependency
+- 3NF: No transitive dependency
+
+## Prisma ORM Setup & Client Initialization
+
+### Purpose
+Prisma ORM is used to interact with the PostgreSQL database using type-safe queries and a generated client.
+
+### Setup Steps
+- Initialized Prisma with PostgreSQL
+- Defined models in schema.prisma
+- Generated Prisma Client
+- Created a singleton Prisma Client for Next.js
+
+### Prisma Client Initialization
+```ts
+import { PrismaClient } from "@prisma/client";
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: ["query", "info", "warn", "error"],
+  });
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
+}

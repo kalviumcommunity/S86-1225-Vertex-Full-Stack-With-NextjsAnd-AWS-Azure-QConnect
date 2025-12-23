@@ -10,6 +10,7 @@ model User {
   id        Int       @id @default(autoincrement())
   name      String
   email     String    @unique
+  phone     String?
   role      Role
   createdAt DateTime  @default(now())
 
@@ -31,7 +32,7 @@ model Queue {
   date        DateTime
   currentNo   Int      @default(0)
 
-  doctor      Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  doctor       Doctor        @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   appointments Appointment[]
 }
 
