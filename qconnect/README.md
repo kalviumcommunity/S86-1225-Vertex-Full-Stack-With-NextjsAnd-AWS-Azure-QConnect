@@ -97,6 +97,52 @@ This project includes a small transaction demo and a set of indexes to improve q
 
 The demo prints `queue.currentNo` and appointment counts before and after a successful booking and after a simulated failed booking (showing rollback).
 
+---
+
+## API Routes & Naming (app/api) 🧭
+
+I added RESTful CRUD endpoints for the primary resources (users, doctors, queues, appointments) under `app/api`.
+
+### Route hierarchy
+
+- /api/users (GET paginated, POST create)
+- /api/users/[id] (GET, PATCH, DELETE)
+- /api/doctors (GET paginated, POST create)
+- /api/doctors/[id] (GET, PATCH, DELETE)
+- /api/queues (GET paginated, optional filter by doctorId, POST create)
+- /api/queues/[id] (GET, PATCH, DELETE)
+- /api/appointments (GET paginated + filters, POST creates appointment atomically)
+- /api/appointments/[id] (GET, PATCH, DELETE)
+
+### Pagination & filtering
+- List endpoints accept `page` and `limit` query params. Example: `/api/users?page=2&limit=20`.
+- `/api/users?q=alice` performs simple name/email search.
+- `/api/queues?doctorId=1` filters queues by doctor.
+- `/api/appointments?queueId=2&status=PENDING` filters appointments.
+
+### Status codes & error handling
+- 200 OK for successful GET/PATCH/DELETE (where applicable)
+- 201 Created for POST
+- 400 Bad Request for invalid inputs
+- 404 Not Found when resource missing
+- 500 Internal when unexpected errors occur
+
+### Sample curl requests
+
+- Get users (first page):
+  - curl -s "http://localhost:3000/api/users?page=1&limit=10"
+- Create user:
+  - curl -X POST -H "Content-Type: application/json" -d '{"name":"Charlie","email":"charlie@example.com"}' http://localhost:3000/api/users
+- Create appointment (atomic):
+  - curl -X POST -H "Content-Type: application/json" -d '{"queueId":1,"userId":1}' http://localhost:3000/api/appointments
+- Update a resource:
+  - curl -X PATCH -H "Content-Type: application/json" -d '{"phone":"9999999999"}' http://localhost:3000/api/users/1
+
+### Testing tips
+- Use Postman or curl to test endpoints and verify proper status codes, JSON responses, pagination and error handling.
+- For the appointment POST, the API uses a transaction: the appointment create + queue increment are atomic (see `src/lib/appointmentService.ts` and `prisma/transactionDemo.ts`).
+
+If you'd like, I can also add an automated Postman collection file or example responses to the README — would you prefer a Postman collection export or simple curl examples (already included)?
 ### Enabling query logging & benchmarking
 - Prisma (JS) query logs:
   - macOS / Linux: DEBUG="prisma:query" npm run dev
