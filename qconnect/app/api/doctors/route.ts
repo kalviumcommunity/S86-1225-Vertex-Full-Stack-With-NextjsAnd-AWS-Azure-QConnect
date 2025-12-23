@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { sendSuccess, sendError } from "@/lib/responseHandler";
 import { ERROR_CODES } from "@/lib/errorCodes";
+import { doctorCreateSchema } from "@/lib/schemas/doctorSchema";
+import { ZodError } from "zod";
 
 export async function GET(req: Request) {
   try {
@@ -26,9 +28,16 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    if (!body.name || !body.specialty || !body.roomNo) return sendError("missing fields", ERROR_CODES.VALIDATION_ERROR, 400);
-    const doctor = await prisma.doctor.create({ data: { name: body.name, specialty: body.specialty, roomNo: body.roomNo } });
-    return sendSuccess(doctor, "Doctor created", 201);
+    try {
+      const data = doctorCreateSchema.parse(body);
+      const doctor = await prisma.doctor.create({ data });
+      return sendSuccess(doctor, "Doctor created", 201);
+    } catch (err: any) {
+      if (err instanceof ZodError) {
+        return sendError("Validation Error", ERROR_CODES.VALIDATION_ERROR, 400, err.errors.map((e) => ({ field: e.path.join("."), message: e.message })));
+      }
+      throw err;
+    }
   } catch (e: any) {
     console.error(e);
     return sendError("Internal", ERROR_CODES.INTERNAL_ERROR, 500, e.message);

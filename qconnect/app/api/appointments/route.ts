@@ -1,6 +1,8 @@
 import { prisma, Status } from "@/lib/prisma";
 import { sendSuccess, sendError } from "@/lib/responseHandler";
 import { ERROR_CODES } from "@/lib/errorCodes";
+import { appointmentCreateSchema } from "@/lib/schemas/appointmentSchema";
+import { ZodError } from "zod";
 
 export async function GET(req: Request) {
   try {
@@ -32,19 +34,26 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    if (!body.queueId || !body.userId) return sendError("queueId and userId required", ERROR_CODES.VALIDATION_ERROR, 400);
+    try {
+      const data = appointmentCreateSchema.parse(body);
 
-    // Use the transaction helper to ensure atomic creation and queue increment
-    const appointment = await prisma.$transaction(async (tx) => {
-      const q = await tx.queue.findUnique({ where: { id: Number(body.queueId) }, select: { currentNo: true } });
-      if (!q) throw new Error("Queue not found");
-      const tokenNo = q.currentNo + 1;
-      const appt = await tx.appointment.create({ data: { tokenNo, status: Status.PENDING as any, userId: Number(body.userId), queueId: Number(body.queueId) } });
-      await tx.queue.update({ where: { id: Number(body.queueId) }, data: { currentNo: { increment: 1 } } });
-      return appt;
-    });
+      // Use the transaction helper to ensure atomic creation and queue increment
+      const appointment = await prisma.$transaction(async (tx) => {
+        const q = await tx.queue.findUnique({ where: { id: Number(data.queueId) }, select: { currentNo: true } });
+        if (!q) throw new Error("Queue not found");
+        const tokenNo = q.currentNo + 1;
+        const appt = await tx.appointment.create({ data: { tokenNo, status: Status.PENDING as any, userId: Number(data.userId), queueId: Number(data.queueId) } });
+        await tx.queue.update({ where: { id: Number(data.queueId) }, data: { currentNo: { increment: 1 } } });
+        return appt;
+      });
 
-    return sendSuccess(appointment, "Appointment created", 201);
+      return sendSuccess(appointment, "Appointment created", 201);
+    } catch (err: any) {
+      if (err instanceof ZodError) {
+        return sendError("Validation Error", ERROR_CODES.VALIDATION_ERROR, 400, err.errors.map((e) => ({ field: e.path.join("."), message: e.message })));
+      }
+      throw err;
+    }
   } catch (e: any) {
     console.error(e);
     return sendError(e.message || "Internal", ERROR_CODES.INTERNAL_ERROR, 400, e.message);

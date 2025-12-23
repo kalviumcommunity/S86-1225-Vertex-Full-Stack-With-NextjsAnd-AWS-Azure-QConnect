@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { sendSuccess, sendError } from "@/lib/responseHandler";
 import { ERROR_CODES } from "@/lib/errorCodes";
+import { queueCreateSchema } from "@/lib/schemas/queueSchema";
+import { ZodError } from "zod";
 
 export async function GET(req: Request) {
   try {
@@ -26,10 +28,17 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    if (!body.doctorId || !body.date) return sendError("doctorId and date required", ERROR_CODES.VALIDATION_ERROR, 400);
-    const date = new Date(body.date);
-    const q = await prisma.queue.create({ data: { doctorId: Number(body.doctorId), date } });
-    return sendSuccess(q, "Queue created", 201);
+    try {
+      const data = queueCreateSchema.parse(body);
+      const date = new Date(data.date);
+      const q = await prisma.queue.create({ data: { doctorId: Number(data.doctorId), date } });
+      return sendSuccess(q, "Queue created", 201);
+    } catch (err: any) {
+      if (err instanceof ZodError) {
+        return sendError("Validation Error", ERROR_CODES.VALIDATION_ERROR, 400, err.errors.map((e) => ({ field: e.path.join("."), message: e.message })));
+      }
+      throw err;
+    }
   } catch (e: any) {
     console.error(e);
     return sendError("Internal", ERROR_CODES.INTERNAL_ERROR, 500, e.message);

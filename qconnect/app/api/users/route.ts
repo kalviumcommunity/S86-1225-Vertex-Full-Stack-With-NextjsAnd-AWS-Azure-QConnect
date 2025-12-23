@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { sendSuccess, sendError } from "@/lib/responseHandler";
 import { ERROR_CODES } from "@/lib/errorCodes";
+import { userCreateSchema } from "@/lib/schemas/userSchema";
+import { ZodError } from "zod";
 
 export async function GET(req: Request) {
   try {
@@ -29,12 +31,16 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    if (!body.email || !body.name) {
-      return sendError("name and email required", ERROR_CODES.VALIDATION_ERROR, 400);
+    try {
+      const data = userCreateSchema.parse(body);
+      const user = await prisma.user.create({ data });
+      return sendSuccess(user, "User created", 201);
+    } catch (err: any) {
+      if (err instanceof ZodError) {
+        return sendError("Validation Error", ERROR_CODES.VALIDATION_ERROR, 400, err.errors.map((e) => ({ field: e.path.join("."), message: e.message })));
+      }
+      throw err;
     }
-
-    const user = await prisma.user.create({ data: { name: body.name, email: body.email, phone: body.phone, role: body.role } });
-    return sendSuccess(user, "User created", 201);
   } catch (e: any) {
     console.error(e);
     return sendError("Internal server error", ERROR_CODES.INTERNAL_ERROR, 500, e.message);
