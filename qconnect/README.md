@@ -199,8 +199,47 @@ Why this helps:
   - Windows (PowerShell): $env:DEBUG = "prisma:query"; npm run dev
 - Use SQL `EXPLAIN` in your Postgres client (or tools like PgHero, AWS RDS Performance Insights) to benchmark before/after index changes.
 
-### Notes & Reflection
-- Transaction usage ensures atomicity (appointment creation + queue increment). Test rollback by calling the failing demo (already done by `prisma/transactionDemo.ts`).
-- Indexes generally improve read/query performance but add write overhead. Monitor write impact if your app is write-heavy and select indexes accordingly.
+---
 
-If you'd like, I can add an automated benchmark (EXPLAIN outputs) into the demo script so you have before/after timings included in the README.
+## Input Validation with Zod ✅
+
+This project uses Zod to validate incoming POST/PATCH requests. Install it locally:
+
+- npm install zod
+
+### Schemas
+- `src/lib/schemas/userSchema.ts` — `userCreateSchema`, `userUpdateSchema`
+- `src/lib/schemas/doctorSchema.ts` — `doctorCreateSchema`, `doctorUpdateSchema`
+- `src/lib/schemas/queueSchema.ts` — `queueCreateSchema`, `queueUpdateSchema`
+- `src/lib/schemas/appointmentSchema.ts` — `appointmentCreateSchema`, `appointmentUpdateSchema`
+
+### Behavior
+- All POST and PATCH endpoints validate input and return **Validation Error (E001)** with structured error details when validation fails.
+
+### Example failing request
+- curl -X POST http://localhost:3000/api/users -H "Content-Type: application/json" -d '{"name":"A","email":"bademail"}'
+
+Expected response (400):
+
+```json
+{
+  "success": false,
+  "message": "Validation Error",
+  "error": {
+    "code": "E001",
+    "details": [
+      { "field": "name", "message": "Name must be at least 2 characters long" },
+      { "field": "email", "message": "Invalid email address" }
+    ]
+  },
+  "timestamp": "2025-12-23T12:00:00.000Z"
+}
+```
+
+### Reuse
+- Schemas are simple TypeScript-first objects and can be imported by client code for consistent client/server validation.
+
+### Reflection
+- Zod improves reliability by rejecting bad inputs early and returning clear, structured validation errors to clients. This reduces DB errors and improves DX.
+
+If you'd like, I can also add a small test suite to verify validation behavior automatically.
