@@ -67,3 +67,44 @@ This project uses Prisma for database schema migrations and reproducible seeding
 - Logging: When you run migrations and seeds locally, capture terminal output or screenshots and attach them to the project README for traceability.
 
 If you want, run the commands locally and paste the migration & seed logs here — I can add them to this README for documentation and verification.
+
+---
+
+## Transactions & Query Optimization 🔧
+
+This project includes a small transaction demo and a set of indexes to improve query performance.
+
+### What I added
+- A transaction-safe appointment flow example in `src/lib/appointmentService.ts` that:
+  - `bookAppointment` — creates an appointment and increments the queue's `currentNo` atomically using `prisma.$transaction()`
+  - `bookAppointmentWithError` — demonstrates a failing transaction to show rollback behavior
+- A demo script: `prisma/transactionDemo.ts` — runs example flows and prints before/after state and counts
+- Schema indexes added for common query patterns:
+  - `Doctor` — `@@index([specialty])`
+  - `Queue` — `@@index([doctorId, date])`
+  - `Appointment` — `@@index([userId])`, `@@index([status])`
+  - A migration SQL file was added under `prisma/migrations/20251223120000_add_indexes/migration.sql` that creates these indexes
+
+### How to run the demo locally
+1. Apply the new migration (creates indexes):
+   - npx prisma migrate dev --name add_indexes
+   - or: npm run migrate:dev
+2. Ensure seed data exists:
+   - npx prisma db seed
+   - or: npm run db:seed
+3. Run the transaction demo (shows success + rollback):
+   - npm run demo:transaction
+
+The demo prints `queue.currentNo` and appointment counts before and after a successful booking and after a simulated failed booking (showing rollback).
+
+### Enabling query logging & benchmarking
+- Prisma (JS) query logs:
+  - macOS / Linux: DEBUG="prisma:query" npm run dev
+  - Windows (PowerShell): $env:DEBUG = "prisma:query"; npm run dev
+- Use SQL `EXPLAIN` in your Postgres client (or tools like PgHero, AWS RDS Performance Insights) to benchmark before/after index changes.
+
+### Notes & Reflection
+- Transaction usage ensures atomicity (appointment creation + queue increment). Test rollback by calling the failing demo (already done by `prisma/transactionDemo.ts`).
+- Indexes generally improve read/query performance but add write overhead. Monitor write impact if your app is write-heavy and select indexes accordingly.
+
+If you'd like, I can add an automated benchmark (EXPLAIN outputs) into the demo script so you have before/after timings included in the README.
