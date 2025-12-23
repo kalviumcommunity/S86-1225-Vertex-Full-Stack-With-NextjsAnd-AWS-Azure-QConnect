@@ -239,7 +239,32 @@ Expected response (400):
 ### Reuse
 - Schemas are simple TypeScript-first objects and can be imported by client code for consistent client/server validation.
 
-### Reflection
-- Zod improves reliability by rejecting bad inputs early and returning clear, structured validation errors to clients. This reduces DB errors and improves DX.
+### Authentication (Signup / Login) 🔐
 
-If you'd like, I can also add a small test suite to verify validation behavior automatically.
+This project includes secure Signup and Login APIs that use `bcrypt` for hashing and `jsonwebtoken` (JWT) for token issuing and verification.
+
+1) Install packages:
+- npm install bcrypt jsonwebtoken
+
+2) Routes added:
+- POST /api/auth/signup — validate input, hash password with bcrypt, return safe user (no password)
+- POST /api/auth/login — validate input, verify password, return JWT token and safe user
+- GET /api/auth/me — protected endpoint, requires `Authorization: Bearer <token>` header
+
+3) Environment
+- Set `JWT_SECRET` in your environment for production. If not set, a default `supersecretkey` is used locally (do not use in production).
+
+4) Example requests
+- Signup:
+  - curl -X POST http://localhost:3000/api/auth/signup -H "Content-Type: application/json" -d '{"name":"Alice","email":"alice@example.com","password":"mypassword"}'
+- Login:
+  - curl -X POST http://localhost:3000/api/auth/login -H "Content-Type: application/json" -d '{"email":"alice@example.com","password":"mypassword"}'
+- Me (protected):
+  - curl -X GET http://localhost:3000/api/auth/me -H "Authorization: Bearer <TOKEN>"
+
+5) Notes & Reflection
+- Passwords are hashed before storage. The new `password` column is nullable to support existing seed data; new signups will store hashed passwords.
+- Tokens expire after 1 hour. For long-lived sessions, consider refresh tokens or rotating refresh tokens stored in secure HTTP-only cookies.
+- Never store JWT secrets in repo; use environment variables and a secrets manager for production.
+
+If you’d like, I can also add a small integration test suite or a Postman collection for these auth endpoints.
