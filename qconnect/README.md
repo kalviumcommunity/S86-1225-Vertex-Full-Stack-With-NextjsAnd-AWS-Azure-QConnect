@@ -143,6 +143,56 @@ I added RESTful CRUD endpoints for the primary resources (users, doctors, queues
 - For the appointment POST, the API uses a transaction: the appointment create + queue increment are atomic (see `src/lib/appointmentService.ts` and `prisma/transactionDemo.ts`).
 
 If you'd like, I can also add an automated Postman collection file or example responses to the README — would you prefer a Postman collection export or simple curl examples (already included)?
+
+---
+
+## Unified API Response Format 🔁
+
+All API endpoints follow a consistent response envelope to make frontend error handling and logging predictable.
+
+Success response format:
+
+```json
+{
+  "success": true,
+  "message": "User created successfully",
+  "data": { "id": 12, "name": "Charlie" },
+  "timestamp": "2025-10-30T10:00:00Z"
+}
+```
+
+Error response format:
+
+```json
+{
+  "success": false,
+  "message": "Missing required field: name",
+  "error": { "code": "E001", "details": "name is required" },
+  "timestamp": "2025-10-30T10:00:00Z"
+}
+```
+
+Utility files:
+- `src/lib/responseHandler.ts` — `sendSuccess()` and `sendError()` helpers used across routes
+- `src/lib/errorCodes.ts` — canonical error codes (e.g. `VALIDATION_ERROR: 'E001'`, `NOT_FOUND: 'E002'`)
+
+Usage example in routes (already applied to `/api/users`, `/api/appointments`, etc.):
+
+```ts
+// example
+import { sendSuccess, sendError } from "@/lib/responseHandler";
+import { ERROR_CODES } from "@/lib/errorCodes";
+
+if (!body.title) return sendError("Missing required field: title", ERROR_CODES.VALIDATION_ERROR, 400);
+return sendSuccess(createdTask, "Task created", 201);
+```
+
+Why this helps:
+- Improves DX: frontend sees the same shape for success and errors
+- Observability: errors include machine-friendly codes and timestamps for tracing
+
+---
+
 ### Enabling query logging & benchmarking
 - Prisma (JS) query logs:
   - macOS / Linux: DEBUG="prisma:query" npm run dev
