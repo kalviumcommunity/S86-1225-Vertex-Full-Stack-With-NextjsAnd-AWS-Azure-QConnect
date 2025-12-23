@@ -24,6 +24,8 @@ model Doctor {
   roomNo    String
 
   queues    Queue[]
+
+  @@index([specialty])
 }
 
 model Queue {
@@ -34,6 +36,8 @@ model Queue {
 
   doctor       Doctor        @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   appointments Appointment[]
+
+  @@index([doctorId, date])
 }
 
 model Appointment {
@@ -47,6 +51,8 @@ model Appointment {
   queue     Queue    @relation(fields: [queueId], references: [id], onDelete: Cascade)
 
   @@unique([queueId, tokenNo])
+  @@index([userId])
+  @@index([status])
 }
 
 enum Role {
