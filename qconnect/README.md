@@ -480,3 +480,60 @@ Response:
 
 ---
 
+## Transactional Email (AWS SES / SendGrid) ✉️
+
+This project includes a small email utility (`src/lib/email.ts`) that supports **AWS SES** and **SendGrid**. Use `EMAIL_PROVIDER` env var to choose the provider (`ses` by default).
+
+### Packages
+- AWS: `@aws-sdk/client-ses`
+- SendGrid: `@sendgrid/mail`
+
+Install:
+- `npm install @aws-sdk/client-ses` or `npm install @sendgrid/mail`
+
+### Environment variables
+- Common:
+  - `EMAIL_PROVIDER` — `ses` or `sendgrid` (default `ses`)
+
+- AWS SES:
+  - `AWS_ACCESS_KEY_ID`
+  - `AWS_SECRET_ACCESS_KEY`
+  - `AWS_REGION`
+  - `SES_EMAIL_SENDER` — verified sender (e.g., `no-reply@yourdomain.com`)
+
+- SendGrid:
+  - `SENDGRID_API_KEY`
+  - `SENDGRID_SENDER` — verified sender email
+
+### Usage
+- Route: `POST /api/email` accepts `{ to, subject, message }` and returns provider-specific success info.
+
+Example:
+```bash
+curl -s -X POST http://localhost:3000/api/email \
+  -H "Content-Type: application/json" \
+  -d '{"to":"student@example.com","subject":"Welcome!","message":"<h3>Hello from QConnect 🚀</h3>"}'
+```
+Success response (SES):
+```json
+{ "success": true, "provider": "ses", "messageId": "01010189b2example123" }
+```
+
+### Template example
+- `src/lib/templates/emailTemplates.ts` exposes `welcomeTemplate(userName)`.
+- Use it like:
+```ts
+import { welcomeTemplate } from "@/lib/templates/emailTemplates";
+import { sendEmail } from "@/lib/email";
+
+await sendEmail({ to: user.email, subject: "Welcome to QConnect", html: welcomeTemplate(user.name) });
+```
+
+### Notes & considerations
+- SES sandbox: only verified recipient addresses are allowed until you move out of sandbox.
+- Rate limits: implement backoff/queues for high-volume transactional sends.
+- Bounces: monitor provider dashboards and handle bounces to maintain deliverability.
+- Security: ensure sender email is verified and set up SPF/DKIM for your domain.
+
+---
+
