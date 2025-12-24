@@ -268,3 +268,49 @@ This project includes secure Signup and Login APIs that use `bcrypt` for hashing
 - Never store JWT secrets in repo; use environment variables and a secrets manager for production.
 
 If you’d like, I can also add a small integration test suite or a Postman collection for these auth endpoints.
+
+---
+
+## Authorization Middleware & RBAC (Role-Based Access Control) 🔐
+
+This project includes a reusable middleware (`app/middleware.ts`) that validates JWTs and enforces role-based access for API routes.
+
+### Behavior
+- The middleware runs for `/api/users/*` and `/api/admin/*` (configured via `matcher`).
+- It expects `Authorization: Bearer <token>` header and verifies the token using `JWT_SECRET`.
+- On success the middleware adds `x-user-email` and `x-user-role` headers for downstream handlers.
+- Access rules:
+  - `/api/users` — any authenticated user can access (general protected route)
+  - `/api/admin` — restricted to users with `role === "admin"` (admin-only)
+
+### Example: Protected Admin Route
+- Request (admin):
+  - curl -X GET http://localhost:3000/api/admin \
+    -H "Authorization: Bearer <ADMIN_JWT>"
+- Successful response (200):
+  - { "success": true, "message": "Welcome Admin! You have full access." }
+
+- Request (regular user):
+  - curl -X GET http://localhost:3000/api/admin \
+    -H "Authorization: Bearer <USER_JWT>"
+- Response (403):
+  - { "success": false, "message": "Access denied" }
+
+### Example: General Protected Route `/api/users`
+- Request without token:
+  - curl -X GET http://localhost:3000/api/users
+- Response (401):
+  - { "success": false, "message": "Token missing" }
+
+- Request with valid token:
+  - curl -X GET http://localhost:3000/api/users \
+    -H "Authorization: Bearer <USER_JWT>"
+- Response (200): contains paginated users and a `meta` object that shows who accessed and the role.
+
+### Notes & Reflection
+- Principle of least privilege: only routes that need elevated permissions are restricted to the `admin` role; ordinary routes require authentication only.
+- Extensibility: Add new roles (e.g., `editor`, `moderator`) in the database and extend middleware checks (or use a role->permission map) to manage fine-grained permissions.
+- Testing: Use the `/api/auth/login` route to obtain tokens for users with different roles and exercise the protected endpoints.
+
+---
+
