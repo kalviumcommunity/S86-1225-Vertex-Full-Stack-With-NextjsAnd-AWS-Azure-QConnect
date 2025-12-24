@@ -6,6 +6,14 @@ import { ZodError } from "zod";
 
 export async function GET(req: Request) {
   try {
+    // middleware adds these headers for authenticated requests
+    const userEmail = req.headers.get("x-user-email");
+    const userRole = req.headers.get("x-user-role") || "user";
+
+    if (!userEmail) {
+      return sendError("Unauthorized", ERROR_CODES.UNAUTHORIZED, 401, "Missing authentication headers");
+    }
+
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, Number(searchParams.get("page") || 1));
     const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") || 10)));
@@ -21,7 +29,8 @@ export async function GET(req: Request) {
       prisma.user.count({ where }),
     ]);
 
-    return sendSuccess({ page, limit, total, data: items }, "Users fetched successfully");
+    // include who accessed and role for demonstration/testing
+    return sendSuccess({ page, limit, total, data: items, meta: { accessedBy: userEmail, role: userRole } }, "Users fetched successfully");
   } catch (e: any) {
     console.error(e);
     return sendError("Failed to fetch users", ERROR_CODES.INTERNAL_ERROR, 500, e.message);
