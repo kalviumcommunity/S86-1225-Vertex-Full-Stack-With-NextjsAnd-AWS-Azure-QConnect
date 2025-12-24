@@ -413,3 +413,70 @@ if (keys.length) await redis.del(...keys);
 
 ---
 
+## File Uploads (AWS S3 / Azure Blob) 🗂️
+
+This project implements pre-signed URL uploads so clients can upload files directly to cloud storage without streaming large files through the app server.
+
+### Packages
+- AWS: `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner`
+- Azure: `@azure/storage-blob`
+
+Install:
+- `npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner @azure/storage-blob`
+
+### Environment variables
+- Storage selection (optional):
+  - `STORAGE_PROVIDER` — `aws` (default) or `azure`
+
+- AWS (if using AWS):
+  - `AWS_ACCESS_KEY_ID`
+  - `AWS_SECRET_ACCESS_KEY`
+  - `AWS_REGION`
+  - `AWS_BUCKET_NAME`
+
+- Azure (if using Azure):
+  - `AZURE_ACCOUNT_NAME`
+  - `AZURE_ACCOUNT_KEY`
+  - `AZURE_CONTAINER_NAME`
+
+- Common:
+  - `UPLOAD_URL_EXPIRES` — seconds the presigned URL is valid (default `60`)
+  - `MAX_UPLOAD_SIZE` — maximum upload size in bytes (default `10000000` = 10MB)
+  - `FILE_UPLOAD_PREFIX` — optional path prefix inside the bucket/container (default `uploads`)
+
+### Flow
+1. Client requests a pre-signed URL from `POST /api/upload` with `{ filename, fileType, size }`.
+2. Server validates file type/size and returns a pre-signed `uploadURL` (method: PUT) and a `publicUrl` where the object will be available (subject to bucket/container ACLs).
+3. Client uploads directly to the storage provider using the `uploadURL`.
+4. After successful upload, client calls `POST /api/files` with `{ fileName, fileURL, size, mime }` to persist metadata in the DB.
+
+### Example: request presigned URL
+```bash
+curl -s -X POST http://localhost:3000/api/upload \
+  -H "Content-Type: application/json" \
+  -d '{"filename":"profile.png","fileType":"image/png","size":43212}'
+```
+Response (success):
+```json
+{ "success": true, "upload": { "uploadURL": "https://...", "key":"uploads/...,", "publicUrl":"https://...", "method":"PUT", "expiresIn":60 } }
+```
+
+### Example: store file metadata
+```bash
+curl -s -X POST http://localhost:3000/api/files \
+  -H "Content-Type: application/json" \
+  -d '{"fileName":"profile.png","fileURL":"https://...","size":43212,"mime":"image/png" }'
+```
+Response:
+```json
+{ "success": true, "message": "File record created", "data": { /* new file record */ } }
+```
+
+### Security & lifecycle
+- Validate file types and sizes server-side as a last line of defense.
+- Use short expiry for presigned URLs (30–120s recommended).
+- Apply appropriate bucket/container ACLs: use private by default and return signed access URLs to clients if necessary.
+- Configure lifecycle policies to archive or delete old files to control cost.
+
+---
+
