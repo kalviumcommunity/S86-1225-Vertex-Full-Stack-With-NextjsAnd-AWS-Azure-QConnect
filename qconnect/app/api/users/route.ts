@@ -4,6 +4,8 @@ import { ERROR_CODES } from "@/lib/errorCodes";
 import { userCreateSchema } from "@/lib/schemas/userSchema";
 import { ZodError } from "zod";
 import { handleError } from "@/lib/errorHandler";
+import redis from "@/lib/redis";
+import { logger } from "@/lib/logger";
 
 export async function GET(req: Request) {
   try {
@@ -25,13 +27,32 @@ export async function GET(req: Request) {
       ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { email: { contains: q, mode: "insensitive" } }] }
       : undefined;
 
+    const cacheKey = `users:list:${page}:${limit}:${q || ""}`;
+    const ttl = Number(process.env.REDIS_TTL || 60); // seconds
+
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      logger.info("Cache Hit", { key: cacheKey });
+      const payload = JSON.parse(cached);
+      return sendSuccess({ ...payload, meta: { accessedBy: userEmail, role: userRole } }, "Users fetched successfully");
+    }
+
+    logger.info("Cache Miss - Fetching from DB", { key: cacheKey });
     const [items, total] = await Promise.all([
       prisma.user.findMany({ where, skip, take: limit, select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true } }),
       prisma.user.count({ where }),
     ]);
 
+    const payload = { page, limit, total, data: items };
+    // Cache the payload for TTL seconds
+    try {
+      await redis.set(cacheKey, JSON.stringify(payload), "EX", ttl);
+    } catch (err) {
+      logger.error("Failed to set users cache", { err, key: cacheKey });
+    }
+
     // include who accessed and role for demonstration/testing
-    return sendSuccess({ page, limit, total, data: items, meta: { accessedBy: userEmail, role: userRole } }, "Users fetched successfully");
+    return sendSuccess({ ...payload, meta: { accessedBy: userEmail, role: userRole } }, "Users fetched successfully");
   } catch (e: any) {
     return handleError(e, "GET /api/users");
   }
@@ -43,6 +64,18 @@ export async function POST(req: Request) {
     try {
       const data = userCreateSchema.parse(body);
       const user = await prisma.user.create({ data });
+
+      // Invalidate users list cache to avoid serving stale data
+      try {
+        const keys = await redis.keys("users:list*");
+        if (keys.length) {
+          await redis.del(...keys);
+          logger.info("Invalidated users cache", { keys });
+        }
+      } catch (err) {
+        logger.error("Failed to invalidate users cache", { err });
+      }
+
       return sendSuccess(user, "User created", 201);
     } catch (err: any) {
       if (err instanceof ZodError) {
