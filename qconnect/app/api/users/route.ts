@@ -3,6 +3,7 @@ import { sendSuccess, sendError } from "@/lib/responseHandler";
 import { ERROR_CODES } from "@/lib/errorCodes";
 import { userCreateSchema } from "@/lib/schemas/userSchema";
 import { ZodError } from "zod";
+import { handleError } from "@/lib/errorHandler";
 
 export async function GET(req: Request) {
   try {
@@ -32,8 +33,7 @@ export async function GET(req: Request) {
     // include who accessed and role for demonstration/testing
     return sendSuccess({ page, limit, total, data: items, meta: { accessedBy: userEmail, role: userRole } }, "Users fetched successfully");
   } catch (e: any) {
-    console.error(e);
-    return sendError("Failed to fetch users", ERROR_CODES.INTERNAL_ERROR, 500, e.message);
+    return handleError(e, "GET /api/users");
   }
 }
 
@@ -51,7 +51,6 @@ export async function POST(req: Request) {
       throw err;
     }
   } catch (e: any) {
-    console.error(e);
-    return sendError("Internal server error", ERROR_CODES.INTERNAL_ERROR, 500, e.message);
+    return handleError(e, "POST /api/users");
   }
 }
