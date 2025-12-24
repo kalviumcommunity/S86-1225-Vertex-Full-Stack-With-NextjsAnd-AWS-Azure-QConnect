@@ -364,3 +364,52 @@ export async function GET() {
 ---
 
 If you want, I can also add a comparison table for dev vs prod output, or wire the logger to `pino`/`winston` for more advanced features. Let me know which you'd prefer.
+
+---
+
+## Redis Caching (Cache-Aside Pattern) ⚡
+
+This project includes a simple Redis integration to cache frequently-read API responses and reduce database load.
+
+### Setup
+- Install the client:
+  - `npm install ioredis`
+- Environment variable:
+  - `REDIS_URL` — e.g. `redis://localhost:6379`
+  - Optional TTL:
+    - `REDIS_TTL` (seconds, default `60`)
+- Client utility: `src/lib/redis.ts` exports a connected redis client.
+
+### Strategy
+- We use **cache-aside** (lazy loading): check cache first; on miss, query DB and populate Redis with a TTL.
+- Cache keys for users list use parameters: `users:list:<page>:<limit>:<q>` to support pagination & search.
+
+### Example: `GET /api/users` (simplified)
+```ts
+const cacheKey = `users:list:${page}:${limit}:${q || ""}`;
+const cached = await redis.get(cacheKey);
+if (cached) return sendSuccess(JSON.parse(cached));
+// otherwise fetch from DB
+await redis.set(cacheKey, JSON.stringify(payload), "EX", ttl);
+```
+
+### Invalidation
+- On user create/update/delete, delete keys matching `users:list*` to avoid stale results:
+```ts
+const keys = await redis.keys("users:list*");
+if (keys.length) await redis.del(...keys);
+```
+
+### Example logs & behavior
+- Cold request (cache miss):
+  - `Cache Miss - Fetching from DB` → DB query → cache the result (TTL 60s)
+- Subsequent request (cache hit):
+  - `Cache Hit` → returned from Redis (much faster)
+
+### Notes & Reflection
+- TTL balances freshness vs performance; set shorter TTL for rapidly-changing data.
+- Invalidation must be performed on writes to keep cache coherent. For large-scale systems, consider more robust patterns (pub/sub invalidation, cache versioning, or fine-grained keys).
+- For production use, consider a managed Redis service and enable monitoring (latency, hit/miss rate).
+
+---
+
