@@ -314,3 +314,53 @@ This project includes a reusable middleware (`app/middleware.ts`) that validates
 
 ---
 
+## Centralized Error Handling & Structured Logging 🛠️
+
+This project includes a small, reusable error handling utility (`src/lib/errorHandler.ts`) and a structured logger (`src/lib/logger.ts`) to centralize error classification, logging and safe user responses.
+
+### logger (src/lib/logger.ts)
+- Lightweight structured logger that outputs JSON lines for `info` and `error`.
+- Example usage:
+
+```ts
+import { logger } from "@/lib/logger";
+logger.error("DB failed", { message: err.message, stack: err.stack });
+```
+
+### handleError (src/lib/errorHandler.ts)
+- Call `handleError(error, context)` from route catch blocks for consistent logging and user-friendly messages.
+- Behavior:
+  - In **development** (`NODE_ENV !== 'production'`): response includes `message` and `stack`.
+  - In **production**: response message is redacted to `"Something went wrong. Please try again later."` and the stack is logged as `"REDACTED"`.
+
+### Example usage in a route
+```ts
+import { handleError } from "@/lib/errorHandler";
+
+export async function GET() {
+  try {
+    throw new Error("Database connection failed!");
+  } catch (error) {
+    return handleError(error, "GET /api/users");
+  }
+}
+```
+
+### Example logs
+- Development console (detailed):
+```json
+{"level":"error","message":"Error in GET /api/users","meta":{"message":"Database connection failed!","stack":"Error: Database connection failed! at ..."},"timestamp":"2025-10-29T16:45:00Z"}
+```
+- Production console (redacted):
+```json
+{"level":"error","message":"Error in GET /api/users","meta":{"message":"Database connection failed!","stack":"REDACTED"},"timestamp":"2025-10-29T16:45:00Z"}
+```
+
+### Why this helps
+- **Consistency**: All unhandled errors follow a single format and route for logging.
+- **Security**: Stack traces are redacted in production responses to avoid leaking internals.
+- **Observability**: JSON logs are easy to ship to CloudWatch, Datadog, ELK, etc.
+
+---
+
+If you want, I can also add a comparison table for dev vs prod output, or wire the logger to `pino`/`winston` for more advanced features. Let me know which you'd prefer.
