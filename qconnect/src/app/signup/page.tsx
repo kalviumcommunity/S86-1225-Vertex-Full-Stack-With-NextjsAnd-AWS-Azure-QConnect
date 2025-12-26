@@ -6,6 +6,8 @@ import { z } from "zod";
 import { useState } from "react";
 import FormInput from "@/components/forms/FormInput";
 import { useRouter } from "next/navigation";
+import { toastSuccess, toastError, toastLoading } from "@/lib/toast";
+import Spinner from "@/components/ui/Spinner";
 
 type SignupFormData = z.infer<typeof signupSchema>;
 
@@ -21,6 +23,7 @@ export default function SignupPage() {
 
   const onSubmit = async (data: SignupFormData) => {
     setServerError(null);
+    const loader = toastLoading("Creating account…");
     try {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
@@ -30,12 +33,15 @@ export default function SignupPage() {
       const json = await res.json();
       if (!json.success) {
         setServerError(json.message || "Signup failed");
+        toastError(json.message || "Signup failed");
         return;
       }
+      toastSuccess("Account created — check your email");
       // Redirect to login after successful signup
       router.push("/login");
     } catch (err: any) {
       setServerError(err.message || "Signup failed");
+      toastError(err.message || "Signup failed");
     }
   };
 

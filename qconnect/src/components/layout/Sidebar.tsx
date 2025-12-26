@@ -5,6 +5,7 @@ export default function Sidebar() {
   const links = [
     { href: "/dashboard", label: "Overview" },
     { href: "/users", label: "Users" },
+    { href: "/feedback-demo", label: "Feedback demo" },
     { href: "/settings", label: "Settings" },
   ];
 
