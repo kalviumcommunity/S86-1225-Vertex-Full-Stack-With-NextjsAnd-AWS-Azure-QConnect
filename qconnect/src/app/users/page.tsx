@@ -6,6 +6,10 @@ const UsersSWRList = dynamic(() => import("@/components/users/UsersSWRList"), { 
 const AddUser = dynamic(() => import("@/components/users/AddUser"), { ssr: false });
 
 export default async function UsersPage() {
+  // Optional artificial delay for demo/testing: set SLOW_FETCH_MS env var (number ms)
+  const delayMs = process.env.SLOW_FETCH_MS ? Number(process.env.SLOW_FETCH_MS) : 0;
+  if (delayMs && delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
+
   const users = await prisma.user.findMany({ select: { id: true, name: true, email: true } });
 
   return (

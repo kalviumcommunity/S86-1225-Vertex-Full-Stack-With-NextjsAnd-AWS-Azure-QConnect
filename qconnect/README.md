@@ -621,28 +621,34 @@ export default function Page() {
 
 ---
 
-## Responsive & Themed Design (Tailwind) 🎨📱
+## Loading & Error States (Skeletons & Error Boundaries) ⏳❌
 
-This project includes a responsive layout and theme-aware styles using TailwindCSS.
+To make the app resilient and communicative during async operations, the project includes route-level loading skeletons and error fallback UIs using Next.js App Router conventions.
 
-### Tailwind configuration
-- **File:** `tailwind.config.mjs`
-- **Highlights:**
-  - dark mode **class-based**: `darkMode: 'class'` (we toggle `.dark` on `<html>` from the UI context)
-  - **Custom colors** under `theme.extend.colors.brand`:
-    - `brand.light: #93C5FD`
-    - `brand.DEFAULT: #3B82F6` (use `bg-brand`)
-    - `brand.dark: #1E40AF`
-  - **Screens / breakpoints** added: `sm:640px`, `md:768px`, `lg:1024px`, `xl:1280px`.
+### What I added
+- `src/components/ui/Skeleton.tsx` — small skeleton helper component using `animate-pulse`.
+- Route-level fallbacks:
+  - `src/app/loading.tsx` — global loading skeleton for top-level navigation.
+  - `src/app/error.tsx` — global error boundary with retry button.
+  - `src/app/users/loading.tsx` & `src/app/users/error.tsx` — route-specific skeleton & retry-friendly error UI.
+  - `src/app/users/[id]/loading.tsx` & `src/app/users/[id]/error.tsx` — per-user loading & error fallbacks.
 
-### Theme toggling
-- The `UIProvider` manages theme state and persists to `localStorage` (`demo_theme`). It applies `.dark` to the root element so Tailwind `dark:` variants take effect (see `src/context/UIContext.tsx`). You can toggle theme using the button in the header.
+### How to simulate states
+- Slow fetch: set `SLOW_FETCH_MS` env var (number of milliseconds) to simulate network delay for server pages. Example:
 
-### Responsive layout examples
-- `src/components/layout/LayoutWrapper.tsx` uses responsive padding (`p-4 md:p-6 lg:p-8`) and theme-aware surface background (`bg-surface` / `dark:bg-gray-900`).
-- `src/app/design-demo/page.tsx` demonstrates a responsive grid that changes columns at `sm` and `lg` breakpoints and shows brand color swatches.
+  - In development run: `SLOW_FETCH_MS=2000 npm run dev`
+  - Or set it in your `.env` file for a persistent delay.
+
+- Error testing: you can throw an error inside a page for testing (e.g., `if (!data) throw new Error('Failed')`) or use browser/Network tab to throttle and disconnect.
+
+### UX decisions
+- Skeletons give users a sense of content structure rather than an ambiguous spinner.
+- Error fallbacks include a prominent retry button (`reset()`), which re-renders the route and attempts to fetch again.
 
 ---
+
+## Responsive & Themed Design (Tailwind) 🎨📱
+
 
 ## Feedback UI: Toasts, Modals & Loaders 🔔🛑⏳
 
