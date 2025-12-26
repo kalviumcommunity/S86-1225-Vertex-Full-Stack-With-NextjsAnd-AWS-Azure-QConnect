@@ -626,7 +626,7 @@ export default function Page() {
 This project adds a small, demo-ready global state solution using React Context and custom hooks:
 
 Structure:
-- `src/context/AuthContext.tsx` — `AuthProvider` + `useAuthContext()` (stores a `user` object and exposes `login`/`logout`).
+- `src/context/AuthContext.tsx` — `AuthProvider` + `useAuthContext()` (stores a `user` object and exposes `login`/logout).
 - `src/context/UIContext.tsx` — `UIProvider` + `useUIContext()` (stores `theme` and `sidebarOpen`).
 - `src/hooks/useAuth.ts` — `useAuth()` custom hook that returns `{ isAuthenticated, user, login, logout }`.
 - `src/hooks/useUI.ts` — `useUI()` custom hook that returns `{ theme, toggleTheme, sidebarOpen, toggleSidebar }`.
@@ -647,6 +647,48 @@ Structure:
 - The provided context is intentionally simple (demo): it stores some state in `localStorage` for hydration and logs events to console for visibility.
 - For complex state or many actions, prefer `useReducer` to centralize updates and avoid unnecessary re-renders.
 - Use React DevTools to inspect provider values and memoize consumers where appropriate.
+
+---
+
+## Client-side Data Fetching with SWR ⚡
+
+This project demonstrates client-side data fetching using **SWR** (stale-while-revalidate) for caching, revalidation and optimistic updates.
+
+### Install
+- `npm install swr`
+
+### Fetcher helper (`src/lib/fetcher.ts`)
+- Provides a small wrapper that maps the API response envelope (`{ success, data }`) to the payload returned to components:
+```ts
+export const fetcher = async (url: string) => {
+  const res = await fetch(url, { credentials: "same-origin" });
+  if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
+  const body = await res.json();
+  if (!body.success) throw new Error(body.message || "API error");
+  return body.data; // e.g., { page, limit, total, data: [...] }
+};
+```
+
+### Example: client-side users list
+- `src/components/users/UsersSWRList.tsx` uses `useSWR('/api/users', fetcher)` and renders `payload.data`.
+- It shows `isValidating` and handles errors.
+
+### Example: optimistic add
+- `src/components/users/AddUser.tsx` performs an optimistic update using `mutate('/api/users')`:
+  - Immediately updates UI with a temporary user
+  - Calls `POST /api/users`
+  - Revalidates the `/api/users` key after the request to sync server state
+
+### How to test
+1. Start dev server: `npm run dev`
+2. Visit `/users` - page contains server-side list and a client-side SWR demo section.
+3. Use the Add User form to test optimistic UI (immediate UI update, background revalidation).
+4. Observe caching behavior and revalidation in React DevTools → SWR cache.
+
+### Notes
+- SWR keys uniquely identify cache entries — use stable keys (strings or arrays for parameterized requests).
+- Use `mutate(key, data, false)` for optimistic UI and then `mutate(key)` to revalidate.
+- Use `onErrorRetry` or `refreshInterval` to tune revalidation and resilience.
 
 ---
 
