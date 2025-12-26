@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
+import dynamic from "next/dynamic";
+const UsersSWRList = dynamic(() => import("@/components/users/UsersSWRList"), { ssr: false });
+const AddUser = dynamic(() => import("@/components/users/AddUser"), { ssr: false });
+
 export default async function UsersPage() {
   const users = await prisma.user.findMany({ select: { id: true, name: true, email: true } });
 
@@ -20,6 +24,21 @@ export default async function UsersPage() {
           </li>
         ))}
       </ul>
+
+      {/* Client-side SWR-powered list + add form */}
+      <div className="mt-8">
+        <p className="text-sm text-gray-500">Below is a client-side demo using SWR (stale-while-revalidate)</p>
+      </div>
+
+      {/* @ts-expect-error Server -> Client Component */}
+      <div className="mt-4">
+        {/* Client components */}
+        {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
+        {/* @ts-ignore */}
+        <AddUser />
+        {/* @ts-ignore */}
+        <UsersSWRList />
+      </div>
     </main>
   );
 }
