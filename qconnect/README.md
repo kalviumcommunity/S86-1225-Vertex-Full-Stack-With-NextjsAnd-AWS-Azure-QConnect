@@ -529,11 +529,46 @@ import { sendEmail } from "@/lib/email";
 await sendEmail({ to: user.email, subject: "Welcome to QConnect", html: welcomeTemplate(user.name) });
 ```
 
-### Notes & considerations
-- SES sandbox: only verified recipient addresses are allowed until you move out of sandbox.
-- Rate limits: implement backoff/queues for high-volume transactional sends.
-- Bounces: monitor provider dashboards and handle bounces to maintain deliverability.
-- Security: ensure sender email is verified and set up SPF/DKIM for your domain.
+---
+
+## Page routing & dynamic pages (App Router)
+
+This project uses the Next.js App Router under `src/app` and includes public and protected pages plus dynamic user pages.
+
+### Routes overview
+- Public:
+  - `/` — home (existing `src/app/page.tsx`)
+  - `/login` — login page (client)
+- Protected (middleware redirects to `/login` if unauthenticated):
+  - `/dashboard` — protected dashboard
+  - `/users` — protected users list (server-rendered)
+  - `/users/[id]` — dynamic user profile
+- Custom 404: `src/app/not-found.tsx`
+
+### Key snippets
+- Middleware handles both API and page protection. For pages it checks cookie `token` and redirects to `/login` if missing or invalid.
+
+- Example client login (sets cookie):
+```ts
+// src/app/login/page.tsx (client)
+// submits to /api/auth/login, sets cookie `token`, then router.push('/dashboard')
+```
+
+- Example protected server page (users list):
+```ts
+// src/app/users/page.tsx
+const users = await prisma.user.findMany({ select: { id, name, email } });
+```
+
+### How to test
+1. Start dev server: `npm run dev`
+2. Visit `/login` and sign in with seeded user (e.g., `demo-user@example.com`) or create one via the signup endpoint.
+3. After successful login you'll be redirected to `/dashboard` and can visit `/users` and `/users/1`.
+
+### Reflection
+- Dynamic routes (`[id]`) make it easy to scale resource pages (users, appointments).
+- Middleware centralizes page protection and keeps UI code simple.
+- Use server-rendered pages for SEO-sensitive content and to avoid exposing internal APIs to the client.
 
 ---
 
