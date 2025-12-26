@@ -15,22 +15,35 @@ export function UIProvider({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
+    // Initialize theme from localStorage or prefers-color-scheme
     try {
       const stored = typeof window !== "undefined" ? localStorage.getItem("demo_theme") : null;
       if (stored === "dark") setTheme("dark");
+      else if (stored === "light") setTheme("light");
+      else if (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        setTheme("dark");
+      }
     } catch {
       // ignore
     }
   }, []);
 
+  useEffect(() => {
+    // Apply dark class to <html> when theme changes
+    try {
+      if (typeof document !== "undefined") {
+        if (theme === "dark") document.documentElement.classList.add("dark");
+        else document.documentElement.classList.remove("dark");
+        localStorage.setItem("demo_theme", theme);
+      }
+    } catch {
+      // ignore
+    }
+  }, [theme]);
+
   const toggleTheme = () => {
     setTheme((prev) => {
       const next = prev === "light" ? "dark" : "light";
-      try {
-        localStorage.setItem("demo_theme", next);
-      } catch {
-        // ignore
-      }
       console.log("Theme toggled to", next);
       return next;
     });
