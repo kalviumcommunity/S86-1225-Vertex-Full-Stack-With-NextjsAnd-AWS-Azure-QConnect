@@ -621,6 +621,29 @@ export default function Page() {
 
 ---
 
+## Responsive & Themed Design (Tailwind) 🎨📱
+
+This project includes a responsive layout and theme-aware styles using TailwindCSS.
+
+### Tailwind configuration
+- **File:** `tailwind.config.mjs`
+- **Highlights:**
+  - dark mode **class-based**: `darkMode: 'class'` (we toggle `.dark` on `<html>` from the UI context)
+  - **Custom colors** under `theme.extend.colors.brand`:
+    - `brand.light: #93C5FD`
+    - `brand.DEFAULT: #3B82F6` (use `bg-brand`)
+    - `brand.dark: #1E40AF`
+  - **Screens / breakpoints** added: `sm:640px`, `md:768px`, `lg:1024px`, `xl:1280px`.
+
+### Theme toggling
+- The `UIProvider` manages theme state and persists to `localStorage` (`demo_theme`). It applies `.dark` to the root element so Tailwind `dark:` variants take effect (see `src/context/UIContext.tsx`). You can toggle theme using the button in the header.
+
+### Responsive layout examples
+- `src/components/layout/LayoutWrapper.tsx` uses responsive padding (`p-4 md:p-6 lg:p-8`) and theme-aware surface background (`bg-surface` / `dark:bg-gray-900`).
+- `src/app/design-demo/page.tsx` demonstrates a responsive grid that changes columns at `sm` and `lg` breakpoints and shows brand color swatches.
+
+---
+
 ## Feedback UI: Toasts, Modals & Loaders 🔔🛑⏳
 
 This project includes a small set of accessible feedback components to improve user confidence and UX:
