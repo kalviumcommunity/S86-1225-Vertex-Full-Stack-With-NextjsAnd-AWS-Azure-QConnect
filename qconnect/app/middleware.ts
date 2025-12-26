@@ -33,7 +33,8 @@ export function middleware(req: NextRequest) {
 
       return NextResponse.next({ request: { headers: requestHeaders } });
     } catch (err) {
-      return NextResponse.json({ success: false, message: "Invalid or expired token" }, { status: 403 });
+      // Token invalid/expired — return 401 so clients can attempt refresh
+      return NextResponse.json({ success: false, message: "Invalid or expired token" }, { status: 401 });
     }
   }
 
