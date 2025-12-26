@@ -621,4 +621,33 @@ export default function Page() {
 
 ---
 
+## Context & Hooks (Auth + UI State) 🧭
+
+This project adds a small, demo-ready global state solution using React Context and custom hooks:
+
+Structure:
+- `src/context/AuthContext.tsx` — `AuthProvider` + `useAuthContext()` (stores a `user` object and exposes `login`/`logout`).
+- `src/context/UIContext.tsx` — `UIProvider` + `useUIContext()` (stores `theme` and `sidebarOpen`).
+- `src/hooks/useAuth.ts` — `useAuth()` custom hook that returns `{ isAuthenticated, user, login, logout }`.
+- `src/hooks/useUI.ts` — `useUI()` custom hook that returns `{ theme, toggleTheme, sidebarOpen, toggleSidebar }`.
+
+### Usage
+- Wrap your app with the providers (done in `src/app/layout.tsx`):
+```tsx
+<AuthProvider>
+  <UIProvider>
+    <LayoutWrapper>{children}</LayoutWrapper>
+  </UIProvider>
+</AuthProvider>
+```
+
+- Demo page: `src/app/context-demo/page.tsx` shows login/logout and theme/sidebar toggles.
+
+### Notes & Best Practices
+- The provided context is intentionally simple (demo): it stores some state in `localStorage` for hydration and logs events to console for visibility.
+- For complex state or many actions, prefer `useReducer` to centralize updates and avoid unnecessary re-renders.
+- Use React DevTools to inspect provider values and memoize consumers where appropriate.
+
+---
+
 
