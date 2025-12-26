@@ -25,15 +25,7 @@ export default function LoginPage() {
         return;
       }
 
-      const token = json.data?.token;
-      if (!token) {
-        setError("No token returned from server");
-        return;
-      }
-
-      // Set cookie (not HttpOnly here - demo use). Adjust attributes for production.
-      document.cookie = `token=${token}; path=/; max-age=3600; samesite=strict`;
-
+      // Cookies for access + refresh are set by the server (HttpOnly). Navigate to dashboard.
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Login failed");

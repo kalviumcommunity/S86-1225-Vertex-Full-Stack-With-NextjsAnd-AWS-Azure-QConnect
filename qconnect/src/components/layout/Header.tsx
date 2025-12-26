@@ -1,9 +1,11 @@
 "use client";
 import Link from "next/link";
 import { useUIContext } from "@/context/UIContext";
+import { useAuthContext } from "@/context/AuthContext";
 
 export default function Header() {
   const { toggleSidebar, toggleTheme, theme } = useUIContext();
+  const { user, logout } = useAuthContext();
 
   return (
     <header className="w-full bg-brand text-white px-4 md:px-6 py-3 flex justify-between items-center" role="banner">
@@ -27,7 +29,11 @@ export default function Header() {
           {theme === "dark" ? "🌙" : "☀️"}
         </button>
 
-        <Link href="/login" className="hidden md:inline-block hover:underline">Login</Link>
+        {user ? (
+          <button onClick={() => logout()} className="hidden md:inline-block hover:underline">Logout</button>
+        ) : (
+          <Link href="/login" className="hidden md:inline-block hover:underline">Login</Link>
+        )}
       </div>
     </header>
   );

@@ -248,8 +248,10 @@ This project includes secure Signup and Login APIs that use `bcrypt` for hashing
 
 2) Routes added:
 - POST /api/auth/signup — validate input, hash password with bcrypt, return safe user (no password)
-- POST /api/auth/login — validate input, verify password, return JWT token and safe user
-- GET /api/auth/me — protected endpoint, requires `Authorization: Bearer <token>` header
+- POST /api/auth/login — validate input, verify password, set **HttpOnly** cookies (`token` short-lived, `refreshToken` long-lived) and return safe user (no token in body)
+- POST /api/auth/refresh — swap a valid refresh token (from HttpOnly cookie) for a new access token (set via cookie) and rotate refresh tokens
+- POST /api/auth/logout — clears cookies and revokes refresh tokens
+- GET /api/auth/me — protected endpoint; if you use client fetches with `credentials: 'same-origin'` the access token cookie will be sent automatically
 
 3) Environment
 - Set `JWT_SECRET` in your environment for production. If not set, a default `supersecretkey` is used locally (do not use in production).
@@ -264,10 +266,44 @@ This project includes secure Signup and Login APIs that use `bcrypt` for hashing
 
 5) Notes & Reflection
 - Passwords are hashed before storage. The new `password` column is nullable to support existing seed data; new signups will store hashed passwords.
-- Tokens expire after 1 hour. For long-lived sessions, consider refresh tokens or rotating refresh tokens stored in secure HTTP-only cookies.
+- This project implements **access + refresh tokens**:
+  - Access token: short-lived (default 15m, controlled by `ACCESS_TOKEN_EXPIRES`), set as an **HttpOnly** cookie named `token`.
+  - Refresh token: long-lived (default 7 days, controlled by `REFRESH_TOKEN_DAYS`), generated server-side and stored hashed in the DB in the `RefreshToken` model; the raw token is set as an **HttpOnly** cookie named `refreshToken` and rotated on use.
+- On protected API calls, clients automatically send the `token` cookie (use `fetch(..., { credentials: 'same-origin' })`). If a request receives 401, client code attempts `POST /api/auth/refresh` to rotate refresh and obtain a new access token (handled automatically by `src/lib/fetcher.ts`).
+- Security choices:
+  - **HttpOnly** cookies + **SameSite=Strict** reduce XSS and CSRF risks.
+  - Refresh tokens are stored hashed (not plain) and rotated/deleted on use to reduce replay risk.
 - Never store JWT secrets in repo; use environment variables and a secrets manager for production.
 
+Migration note: After pulling these changes you must run `npx prisma migrate dev` to add the `RefreshToken` table to your database.
+
 If you’d like, I can also add a small integration test suite or a Postman collection for these auth endpoints.
+
+### Example: Refresh flow (curl)
+1) Login (sets cookies):
+
+```bash
+curl -i -X POST http://localhost:3000/api/auth/login -H "Content-Type: application/json" -d '{"email":"demo-user@example.com","password":"demo"}'
+```
+
+2) Trigger protected API (using cookie set by login):
+
+```bash
+curl -i -X GET http://localhost:3000/api/users -b "cookie.txt"
+```
+
+3) If access token expired (401), call refresh to obtain new access token (cookies are rotated automatically):
+
+```bash
+curl -i -X POST http://localhost:3000/api/auth/refresh -b "cookie.txt" -c "cookie.txt"
+```
+
+4) Logout (clears cookies and revokes refresh tokens):
+
+```bash
+curl -i -X POST http://localhost:3000/api/auth/logout -b "cookie.txt"
+```
+
 
 ---
 

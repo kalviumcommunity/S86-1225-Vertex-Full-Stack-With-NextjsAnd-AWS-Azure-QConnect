@@ -15,10 +15,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User>(null);
 
   useEffect(() => {
-    // Optional: hydrate user from cookie / localStorage (demo only)
+    // Attempt to hydrate user by calling /api/auth/me (cookies are sent via same-origin)
+    const fetchMe = async () => {
+      try {
+        const res = await fetch("/api/auth/me", { credentials: "same-origin" });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json?.success && json.data) {
+          setUser(json.data.user);
+          try { localStorage.setItem("demo_user", JSON.stringify(json.data.user)); } catch {}
+        }
+      } catch {
+        // ignore
+      }
+    };
+    fetchMe();
+
+    // Also fallback to localStorage for demo
     try {
       const raw = typeof window !== "undefined" ? localStorage.getItem("demo_user") : null;
-      if (raw) setUser(JSON.parse(raw));
+      if (raw && !user) setUser(JSON.parse(raw));
     } catch {
       // ignore
     }
@@ -34,7 +50,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log("User logged in:", u);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+    } catch (e) {
+      console.error("Logout request failed", e);
+    }
     setUser(null);
     try {
       localStorage.removeItem("demo_user");
