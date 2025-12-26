@@ -28,6 +28,7 @@ export function middleware(req: NextRequest) {
 
       // Attach user info for downstream handlers
       const requestHeaders = new Headers(req.headers);
+      requestHeaders.set("x-user-id", String(decoded.id));
       requestHeaders.set("x-user-email", decoded.email);
       requestHeaders.set("x-user-role", decoded.role);
 

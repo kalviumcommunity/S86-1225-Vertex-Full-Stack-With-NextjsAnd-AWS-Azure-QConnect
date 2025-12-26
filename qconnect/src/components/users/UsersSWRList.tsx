@@ -5,11 +5,14 @@ import { useState } from "react";
 import { useModal } from "@/context/ModalContext";
 import { toastSuccess, toastError } from "@/lib/toast";
 import Spinner from "@/components/ui/Spinner";
+import { useAuth } from "@/hooks/useAuth";
+import { hasPermission } from "@/lib/rbac";
 
 export default function UsersSWRList() {
   const { data, error, isValidating } = useSWR("/api/users", fetcher, { revalidateOnFocus: true });
   const { confirm } = useModal();
   const [deleting, setDeleting] = useState<string | null>(null);
+  const { user } = useAuth();
 
   if (error) return <p className="text-red-600">Failed to load users: {error.message}</p>;
   if (!data) return <p>Loading...</p>;
@@ -44,10 +47,19 @@ export default function UsersSWRList() {
               <div className="text-sm text-gray-600">{u.email}</div>
             </div>
             <div className="flex items-center gap-2">
-              {deleting === u.id ? <Spinner size={18} /> : (
-                <button onClick={() => handleDelete(u.id)} className="px-2 py-1 rounded bg-red-600 text-white text-sm">
-                  Delete
-                </button>
+              {deleting === u.id ? (
+                <Spinner size={18} />
+              ) : (
+                // UI guard: show delete only if user has delete permission or is deleting self
+                ((): any => {
+                  const allowed = hasPermission(user?.role, "delete") || user?.id === u.id;
+                  if (!allowed) return null;
+                  return (
+                    <button onClick={() => handleDelete(u.id)} className="px-2 py-1 rounded bg-red-600 text-white text-sm">
+                      Delete
+                    </button>
+                  );
+                })()
               )}
             </div>
           </li>
