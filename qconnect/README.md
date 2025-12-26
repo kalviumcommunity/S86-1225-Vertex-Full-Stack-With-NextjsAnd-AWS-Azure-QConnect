@@ -621,6 +621,35 @@ export default function Page() {
 
 ---
 
+## Feedback UI: Toasts, Modals & Loaders 🔔🛑⏳
+
+This project includes a small set of accessible feedback components to improve user confidence and UX:
+
+- **Toasts (instant feedback)** — implemented with `sonner`. A global `<Toaster />` is mounted in `src/app/layout.tsx` so you can call `toastSuccess()`, `toastError()` or `toastLoading()` from anywhere via `src/lib/toast.ts`.
+- **Confirm Modal (blocking confirmation)** — a promise-based confirmation dialog implemented via `src/context/ModalContext.tsx` and rendered by `src/components/ui/ConfirmModal.tsx`. Use `const { confirm } = useModal()` and `await confirm({ title, description })` to prompt the user.
+- **Spinner / Loader (process feedback)** — `src/components/ui/Spinner.tsx` provides a small SVG spinner used in buttons and list items while asynchronous operations run.
+
+Accessibility and behavior:
+- Toasts are announced politely via the underlying library and disappear automatically.
+- The confirm modal uses `role="dialog"`, `aria-modal="true"`, focus trapping (Tab) and closes on `Escape`.
+- Loaders include `role="status"` where appropriate and are non-blocking unless placed inside a blocking modal.
+
+Where used in the demo:
+- `src/components/users/AddUser.tsx` — shows a spinner in the button during creation and shows success/error toasts.
+- `src/components/users/UsersSWRList.tsx` — delete actions prompt the confirm modal, show a spinner while deleting and display success/error toasts.
+- `src/app/contact/page.tsx` & `src/app/signup/page.tsx` — submission flows use loading spinners and toasts to indicate progress and result.
+
+How to enable locally:
+1. Install the toast dependency: `npm install` (we added `sonner` to `package.json`, run `npm install` locally if you haven't yet).
+2. Start dev server: `npm run dev` and visit the pages mentioned above.
+
+Design notes:
+- Keep toasts succinct (2–4 words for success), and avoid stacking too many toasts.
+- Modals should be used for destructive or irreversible actions only (deletion, approvals).
+- Use loaders for any operation that takes a noticeable time (file uploads, long API calls). This improves perceived performance.
+
+---
+
 ## Context & Hooks (Auth + UI State) 🧭
 
 This project adds a small, demo-ready global state solution using React Context and custom hooks:

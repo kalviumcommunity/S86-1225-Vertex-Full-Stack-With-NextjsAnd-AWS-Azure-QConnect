@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { UIProvider } from "@/context/UIContext";
+import { ModalProvider } from "@/context/ModalContext";
+import { Toaster } from "@/lib/toast";
 import "@/components/layout/LayoutWrapper"; // ensure component is included in bundle
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 
@@ -40,9 +42,14 @@ export default function RootLayout({
             {/* eslint-disable-next-line @next/next/no-sync-scripts */}
             <AuthProvider>
               <UIProvider>
-                <LayoutWrapper>
-                  {children}
-                </LayoutWrapper>
+                <ModalProvider>
+                  <LayoutWrapper>
+                    {children}
+                  </LayoutWrapper>
+                  {/* global Toaster for instant feedback */}
+                  {/* Note: Toaster is a client component from `sonner` */}
+                  <Toaster position="top-right" />
+                </ModalProvider>
               </UIProvider>
             </AuthProvider>
           </div>
