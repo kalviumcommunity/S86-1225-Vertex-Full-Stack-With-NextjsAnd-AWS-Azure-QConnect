@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
+import { UIProvider } from "@/context/UIContext";
 import "@/components/layout/LayoutWrapper"; // ensure component is included in bundle
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 
@@ -36,9 +38,13 @@ export default function RootLayout({
             {/* We render LayoutWrapper directly so pages get consistent header/sidebar */}
             {/* Note: LayoutWrapper uses Header and Sidebar which are client components */}
             {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-            <LayoutWrapper>
-              {children}
-            </LayoutWrapper>
+            <AuthProvider>
+              <UIProvider>
+                <LayoutWrapper>
+                  {children}
+                </LayoutWrapper>
+              </UIProvider>
+            </AuthProvider>
           </div>
         </div>
       </body>
