@@ -34,6 +34,20 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   try {
     const id = Number(params.id);
+
+    // RBAC: only admin can delete users (or user can delete themselves)
+    const role = req.headers.get("x-user-role") || undefined;
+    const userIdHeader = req.headers.get("x-user-id");
+    const userId = userIdHeader ? Number(userIdHeader) : undefined;
+
+    const { hasPermission } = await import("@/lib/rbac");
+    const { logger } = await import("@/lib/logger");
+
+    const allowed = hasPermission(role, "delete") || userId === id;
+    logger.info("RBAC check", { action: "delete_user", role, userId, targetUserId: id, allowed });
+
+    if (!allowed) return sendError("Access denied", ERROR_CODES.UNAUTHORIZED, 403);
+
     await prisma.user.delete({ where: { id } });
     return sendSuccess(null, "User deleted");
   } catch (e: any) {

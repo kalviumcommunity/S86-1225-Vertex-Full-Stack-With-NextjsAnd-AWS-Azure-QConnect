@@ -1,7 +1,7 @@
 "use client";
 import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
 
-type User = { id?: number; name?: string; email?: string } | null;
+type User = { id?: number; name?: string; email?: string; role?: string } | null;
 
 interface AuthContextType {
   user: User;
