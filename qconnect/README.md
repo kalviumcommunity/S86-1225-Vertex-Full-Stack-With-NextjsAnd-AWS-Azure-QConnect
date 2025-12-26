@@ -545,6 +545,14 @@ This project uses the Next.js App Router under `src/app` and includes public and
   - `/users/[id]` — dynamic user profile
 - Custom 404: `src/app/not-found.tsx`
 
+### Component architecture & Layout
+- Components are organized under `src/components`:
+  - `src/components/layout` — `Header`, `Sidebar`, `LayoutWrapper`
+  - `src/components/ui` — reusable UI elements like `Button`
+  - `src/components/index.ts` — barrel export for easy imports
+
+- The global layout (`src/app/layout.tsx`) now uses `LayoutWrapper` so every page gets the shared header and sidebar automatically.
+
 ### Key snippets
 - Middleware handles both API and page protection. For pages it checks cookie `token` and redirects to `/login` if missing or invalid.
 
@@ -571,4 +579,46 @@ const users = await prisma.user.findMany({ select: { id, name, email } });
 - Use server-rendered pages for SEO-sensitive content and to avoid exposing internal APIs to the client.
 
 ---
+
+## Component Architecture & Reusable UI 🧩
+
+A small component library was added under `src/components` to encourage reusability and consistent UI across pages.
+
+### Folder structure
+- `src/components/layout` — `Header.tsx`, `Sidebar.tsx`, `LayoutWrapper.tsx` (LayoutWrapper composes Header + Sidebar)
+- `src/components/ui` — `Button.tsx` (reusable UI element)
+- `src/components/index.ts` — barrel export for convenience
+
+### Header
+- Accessible header with role="banner" and nav label. Use `<Link>` from `next/link` for navigation.
+
+### Sidebar
+- Sidebar exposes contextual navigation and uses semantic `aside` with `role="navigation"`.
+
+### LayoutWrapper
+- Composes `Header` + `Sidebar` and provides page content area. Pages are rendered inside the layout wrapper so they inherit the shared navigation and spacing.
+
+### Button (ui)
+- Small, accessible button component with `primary` and `secondary` variants and an optional `ariaLabel` prop.
+
+### Accessibility & Best Practices
+- Use semantic elements (`header`, `nav`, `aside`, `main`) and `aria-*` attributes where appropriate.
+- Keep interactive components keyboard accessible and provide visible focus styles (use CSS).
+
+### Example usage
+```tsx
+import { LayoutWrapper, Button } from '@/components';
+
+export default function Page() {
+  return (
+    <LayoutWrapper>
+      <h1>Page</h1>
+      <Button label="Create" />
+    </LayoutWrapper>
+  );
+}
+```
+
+---
+
 
