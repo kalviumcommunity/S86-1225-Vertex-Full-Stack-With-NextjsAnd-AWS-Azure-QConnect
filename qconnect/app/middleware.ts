@@ -7,10 +7,12 @@ const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Only protect specific routes
+  // API route protection (accept token via Authorization header OR cookie)
   if (pathname.startsWith("/api/admin") || pathname.startsWith("/api/users")) {
     const authHeader = req.headers.get("authorization");
-    const token = authHeader?.split(" ")[1];
+    const headerToken = authHeader?.split(" ")[1];
+    const cookieToken = req.cookies.get("token")?.value;
+    const token = headerToken || cookieToken;
 
     if (!token) {
       return NextResponse.json({ success: false, message: "Token missing" }, { status: 401 });
@@ -19,7 +21,7 @@ export function middleware(req: NextRequest) {
     try {
       const decoded: any = jwt.verify(token, JWT_SECRET);
 
-      // Role-based access control
+      // Role-based access control for admin API
       if (pathname.startsWith("/api/admin") && decoded.role !== "admin") {
         return NextResponse.json({ success: false, message: "Access denied" }, { status: 403 });
       }
@@ -35,10 +37,27 @@ export function middleware(req: NextRequest) {
     }
   }
 
+  // Page-level protection: redirect to /login if not authenticated
+  if (pathname.startsWith("/dashboard") || pathname.startsWith("/users")) {
+    const token = req.cookies.get("token")?.value;
+    if (!token) {
+      const loginUrl = new URL("/login", req.url);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    try {
+      jwt.verify(token, JWT_SECRET);
+      return NextResponse.next();
+    } catch {
+      const loginUrl = new URL("/login", req.url);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   return NextResponse.next();
 }
 
 // Limit middleware to these paths for performance
 export const config = {
-  matcher: ["/api/admin/:path*", "/api/users/:path*"],
+  matcher: ["/api/admin/:path*", "/api/users/:path*", "/dashboard/:path*", "/users/:path*"] ,
 };
