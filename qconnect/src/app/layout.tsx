@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "@/components/layout/LayoutWrapper"; // ensure component is included in bundle
+import LayoutWrapper from "@/components/layout/LayoutWrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,15 +29,18 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <header className="p-4 bg-gray-100">
-          <nav className="flex gap-4">
-            <a href="/">Home</a>
-            <a href="/login">Login</a>
-            <a href="/dashboard">Dashboard</a>
-            <a href="/users">Users</a>
-          </nav>
-        </header>
-        {children}
+        {/* Use LayoutWrapper to provide shared header and sidebar across pages */}
+        <div className="min-h-screen">
+          {/* LayoutWrapper is client component and is safe to import here via dynamic or as client component tree */}
+          <div id="app-layout">
+            {/* We render LayoutWrapper directly so pages get consistent header/sidebar */}
+            {/* Note: LayoutWrapper uses Header and Sidebar which are client components */}
+            {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+            <LayoutWrapper>
+              {children}
+            </LayoutWrapper>
+          </div>
+        </div>
       </body>
     </html>
   );

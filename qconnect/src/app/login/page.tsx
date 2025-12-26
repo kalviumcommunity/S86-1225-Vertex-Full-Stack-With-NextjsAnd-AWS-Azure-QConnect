@@ -32,7 +32,7 @@ export default function LoginPage() {
       }
 
       // Set cookie (not HttpOnly here - demo use). Adjust attributes for production.
-      document.cookie = `token=${token}; path=/; max-age=3600`;
+      document.cookie = `token=${token}; path=/; max-age=3600; samesite=strict`;
 
       router.push("/dashboard");
     } catch (err: any) {
