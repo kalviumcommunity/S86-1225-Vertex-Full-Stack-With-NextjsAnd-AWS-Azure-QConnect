@@ -449,6 +449,42 @@ if (keys.length) await redis.del(...keys);
 
 ---
 
+## Security Headers — HTTPS, HSTS, CSP & CORS 🔐
+
+This project enforces important security headers and provides middleware to help you enforce HTTPS, HSTS, Content Security Policy (CSP), and CORS for API routes.
+
+### What was added
+- **Global headers** (via `next.config.ts`): `Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` and **Strict-Transport-Security** (HSTS) when running in production or when `ENABLE_HSTS=true`.
+- **Middleware (`app/middleware.ts`)**:
+  - Optional HTTPS enforcement/redirect when `NODE_ENV=production` or `ENFORCE_HTTPS=true`.
+  - Adds HSTS and other security headers to all responses (in production).
+  - Handles CORS for `/api/*` routes, including `OPTIONS` preflight handling and dynamic `Access-Control-Allow-Origin` based on `CORS_ORIGINS` environment variable.
+
+### Configuration (env)
+- `ENFORCE_HTTPS` — set to `true` to redirect HTTP → HTTPS in non-production testing environments.
+- `ENABLE_HSTS` — set to `true` to add HSTS header even during testing.
+- `CSP_DIRECTIVES` — overrides the CSP header (default: `default-src 'self'; script-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline';`).
+- `CORS_ORIGINS` — comma-separated list of allowed origins for API access (default: `http://localhost:3000`).
+
+### How to test locally
+- Start dev server: `npm run dev`.
+- Example curl to inspect headers on a page:
+  - curl -I http://localhost:3000/
+- Example curl to test CORS preflight (replace origin):
+  - curl -i -X OPTIONS http://localhost:3000/api/users -H "Origin: http://localhost:3000" -H "Access-Control-Request-Method: POST"
+- In the browser: open DevTools → Network → click a request → check the **Response headers** for `Content-Security-Policy`, `Strict-Transport-Security`, `Access-Control-Allow-Origin`, etc.
+
+### Security scan recommendations
+- Use https://securityheaders.com/ or https://observatory.mozilla.org/ to scan your deployed domain.
+- Test changes in staging before making CSP stricter in production — strict CSPs can break third-party integrations (analytics, fonts).
+
+### Notes & Future improvements
+- If deploying behind a proxy or CDN (e.g., Vercel, CloudFront), ensure the `x-forwarded-proto` header is set so the middleware can detect secure requests.
+- Consider adding a CSP report-uri to collect CSP violations and iteratively tighten policies.
+- Consider adding automated CI checks (e.g., a simple curl-based header check) to fail builds if headers are missing.
+
+---
+
 ## File Uploads (AWS S3 / Azure Blob) 🗂️
 
 This project implements pre-signed URL uploads so clients can upload files directly to cloud storage without streaming large files through the app server.
