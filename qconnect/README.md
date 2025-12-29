@@ -603,11 +603,45 @@ Response:
 { "success": true, "message": "File record created", "data": { /* new file record */ } }
 ```
 
+### IAM / SAS snippets & best practices
+
+AWS (minimal S3 policy for uploading/reading objects in a single bucket):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject"],
+      "Resource": ["arn:aws:s3:::your-bucket-name/*"]
+    }
+  ]
+}
+```
+
+Azure (SAS token permissions example):
+
+- Generate a SAS token with `Write` and `Create` permissions scoped to a single container and a short expiry time.
+
+Security best practices:
+
+- **Block public access** on the bucket/container for private apps.
+- Use short expirations for presigned URLs (30–120s) and narrow permissions for SAS tokens.
+- Store cloud credentials in a secrets manager (AWS Secrets Manager, Azure Key Vault) and never commit them to source control.
+
 ### Security & lifecycle
 - Validate file types and sizes server-side as a last line of defense.
 - Use short expiry for presigned URLs (30–120s recommended).
 - Apply appropriate bucket/container ACLs: use private by default and return signed access URLs to clients if necessary.
 - Configure lifecycle policies to archive or delete old files to control cost.
+
+### Local test UI & verification
+
+- Install the necessary SDK packages locally if you plan to run AWS/Azure code: `npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner @azure/storage-blob`.
+- Start dev server: `npm run dev` and visit `/upload-demo` to test the end-to-end flow in the browser.
+- After uploading, verify the file is available (if public or your bucket allows) with the helper script:
+  - `npm run verify:upload https://your-bucket.s3.region.amazonaws.com/.../file.jpg`
 
 ---
 
