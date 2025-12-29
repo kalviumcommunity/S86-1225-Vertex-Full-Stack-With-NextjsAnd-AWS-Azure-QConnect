@@ -21,7 +21,8 @@
     "zod": "^4.35.0",
     "bcrypt": "^5.1.0",
     "jsonwebtoken": "^9.1.0",
-    "sonner": "^0.21.1"
+    "sonner": "^0.21.1",
+    "sanitize-html": "^2.11.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
