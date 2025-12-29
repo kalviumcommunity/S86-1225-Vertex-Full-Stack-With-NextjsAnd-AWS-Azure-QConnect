@@ -11,7 +11,8 @@
     "migrate:reset": "prisma migrate reset",
     "db:seed": "prisma db seed",
     "prisma:studio": "prisma studio",
-    "demo:transaction": "ts-node prisma/transactionDemo.ts"
+    "demo:transaction": "ts-node prisma/transactionDemo.ts",
+    "check:headers": "node scripts/check-headers.js"
   },
   "dependencies": {
     "@prisma/client": "^7.1.0",
