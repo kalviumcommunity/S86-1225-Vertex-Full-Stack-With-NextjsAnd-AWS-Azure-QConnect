@@ -7,6 +7,7 @@ import { toastSuccess, toastError } from "@/lib/toast";
 import Spinner from "@/components/ui/Spinner";
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission } from "@/lib/rbac";
+import { escapeHtml } from "@/lib/escapeHtml";
 
 export default function UsersSWRList() {
   const { data, error, isValidating } = useSWR("/api/users", fetcher, { revalidateOnFocus: true });
@@ -43,8 +44,8 @@ export default function UsersSWRList() {
         {users.map((u: any) => (
           <li key={u.id} className="p-2 border rounded flex items-center justify-between">
             <div>
-              <div className="font-medium">{u.name}</div>
-              <div className="text-sm text-gray-600">{u.email}</div>
+              <div className="font-medium">{escapeHtml(u.name)}</div>
+              <div className="text-sm text-gray-600">{escapeHtml(u.email)}</div>
             </div>
             <div className="flex items-center gap-2">
               {deleting === u.id ? (

@@ -63,7 +63,9 @@ export async function POST(req: Request) {
     const body = await req.json();
     try {
       const data = userCreateSchema.parse(body);
-      const user = await prisma.user.create({ data });
+      const { sanitizeInput } = await import("@/lib/sanitize");
+      const clean = sanitizeInput(data);
+      const user = await prisma.user.create({ data: clean });
 
       // Invalidate users list cache to avoid serving stale data
       try {

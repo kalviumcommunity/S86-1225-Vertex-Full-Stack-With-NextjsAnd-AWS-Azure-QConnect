@@ -11,12 +11,16 @@ export async function POST(req: Request) {
     try {
       const data = signupSchema.parse(body);
 
+      // Sanitize all input fields to prevent XSS/HTML injection
+      const { sanitizeInput } = await import("@/lib/sanitize");
+      const clean = sanitizeInput(data);
+
       // Check if user exists
-      const existing = await prisma.user.findUnique({ where: { email: data.email } });
+      const existing = await prisma.user.findUnique({ where: { email: clean.email } });
       if (existing) return sendError("User already exists", ERROR_CODES.VALIDATION_ERROR, 400);
 
-      const hashed = await bcrypt.hash(data.password, 10);
-      const user = await prisma.user.create({ data: { name: data.name, email: data.email, password: hashed } });
+      const hashed = await bcrypt.hash(clean.password, 10);
+      const user = await prisma.user.create({ data: { name: clean.name, email: clean.email, password: hashed } });
 
       // return safe user object (omit password)
       const safe = await prisma.user.findUnique({ where: { id: user.id }, select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true } });
