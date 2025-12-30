@@ -1,16 +1,38 @@
-export const logger = {
-  info: (message: string, meta?: any) => {
+function ts() { return new Date().toISOString(); }
+
+export function info(message: string, meta: Record<string, unknown> = {}) {
+  try {
+    console.log(JSON.stringify({ timestamp: ts(), level: 'info', message, ...meta }));
+  } catch {
+    console.log(message, meta);
+  }
+}
+
+export function warn(message: string, meta: Record<string, unknown> = {}) {
+  try {
+    console.warn(JSON.stringify({ timestamp: ts(), level: 'warn', message, ...meta }));
+  } catch {
+    console.warn(message, meta);
+  }
+}
+
+export function error(message: string, meta: Record<string, unknown> = {}) {
+  try {
+    console.error(JSON.stringify({ timestamp: ts(), level: 'error', message, ...meta }));
+  } catch {
+    console.error(message, meta);
+  }
+}
+
+export function debug(message: string, meta: Record<string, unknown> = {}) {
+  if (process.env.NODE_ENV !== 'production') {
     try {
-      console.log(JSON.stringify({ level: "info", message, meta, timestamp: new Date().toISOString() }));
+      console.debug(JSON.stringify({ timestamp: ts(), level: 'debug', message, ...meta }));
     } catch {
-      console.log(message, meta);
+      console.debug(message, meta);
     }
-  },
-  error: (message: string, meta?: any) => {
-    try {
-      console.error(JSON.stringify({ level: "error", message, meta, timestamp: new Date().toISOString() }));
-    } catch {
-      console.error(message, meta);
-    }
-  },
-};
+  }
+}
+
+export const logger = { info, warn, error, debug };
+export default logger;

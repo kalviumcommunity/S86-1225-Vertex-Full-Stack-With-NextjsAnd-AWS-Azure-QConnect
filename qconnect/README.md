@@ -468,6 +468,90 @@ Example (snippet of container definition):
 - Browser showing HTTPS padlock for `https://example.com`
 
 
+## Logging & Monitoring (AWS CloudWatch) 📈
+
+**Goals:** Emit structured JSON logs with correlation IDs, collect container logs in CloudWatch Logs, create metric filters for error rates, and configure dashboards and alerts for operational visibility.
+
+### Structured logs (JSON)
+- Use a consistent schema: `timestamp`, `level`, `message`, `requestId` (correlation id), and additional metadata (userId, path, statusCode).
+- This repo includes `src/lib/logger.ts` which prints JSON logs ready for CloudWatch ingestion. Example log:
+
+```json
+{"timestamp":"2025-12-30T10:00:00.000Z","level":"error","message":"Failed to process request","requestId":"1670000000000","userId":123}
+```
+
+### ECS task definition: send logs to CloudWatch Logs
+Add a `logConfiguration` to the container definition in your task definition so that each container sends stdout/stderr to CloudWatch:
+
+```json
+"logConfiguration": {
+  "logDriver": "awslogs",
+  "options": {
+    "awslogs-group": "/ecs/nextjs-app",
+    "awslogs-region": "ap-south-1",
+    "awslogs-stream-prefix": "ecs"
+  }
+}
+```
+
+Create the log group (or let ECS create it automatically):
+
+```bash
+aws logs create-log-group --log-group-name /ecs/nextjs-app --region ap-south-1
+aws logs put-retention-policy --log-group-name /ecs/nextjs-app --retention-in-days 14 --region ap-south-1
+```
+
+### Metric filter & alarm (example: count error logs)
+Create a metric filter to count logs where `level` is `error`:
+
+```bash
+aws logs put-metric-filter \
+  --log-group-name "/ecs/nextjs-app" \
+  --filter-name "ErrorCount" \
+  --filter-pattern '{ $.level = "error" }' \
+  --metric-transformations metricName=ErrorCount,metricNamespace=NextJSApp,metricValue=1
+
+# Create an alarm on that metric (example: >10 errors in 5 minutes)
+aws cloudwatch put-metric-alarm \
+  --alarm-name "NextJS-High-Errors" \
+  --metric-name ErrorCount \
+  --namespace NextJSApp \
+  --statistic Sum \
+  --period 300 \
+  --threshold 10 \
+  --comparison-operator GreaterThanThreshold \
+  --evaluation-periods 1 \
+  --alarm-actions <SNS_TOPIC_ARN>
+```
+
+### Logs Insights query example (trace errors by hour)
+
+```
+fields @timestamp, @message
+| parse @message /"level":\s*"(?<level>[^\"]+)"/
+| filter level = "error"
+| stats count() by bin(1h)
+```
+
+### Dashboards & alerts
+- Build a CloudWatch Dashboard showing: ErrorCount (metric), Average response latency, Container CPU/Memory usage.
+- Configure alerts to notify via SNS (email/Slack webhook) when thresholds are crossed.
+
+### Retention & archival
+- Keep operational logs for 7–14 days and audit logs longer (90+ days) depending on compliance needs.
+- Archive logs to S3 for long-term storage using a Lambda or Lifecycle export if needed.
+
+### Validation checklist
+- [ ] CloudWatch Log Group `/ecs/nextjs-app` exists and receives logs.
+- [ ] Metric filter `ErrorCount` is created and shows non-zero data when errors occur.
+- [ ] Dashboard shows relevant metrics and alarms are configured to notify the on-call channel.
+
+
+### Notes
+- Use structured logs — they make metric extraction and searching far more reliable.
+- Correlate application logs with X-Ray traces or request metrics for full-stack observability.
+
+
 ### Example: Refresh flow (curl)
 1) Login (sets cookies):
 
