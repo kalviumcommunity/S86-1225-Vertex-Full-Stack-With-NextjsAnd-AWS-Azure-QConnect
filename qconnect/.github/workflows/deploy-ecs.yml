@@ -1,0 +1,50 @@
+name: CI/CD - Build & Deploy to AWS ECS
+
+on:
+  push:
+    branches: [ "main", "branch-34" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_TAG: latest
+      ECR_REPO: ${{ secrets.ECR_REPO }} # e.g. <account>.dkr.ecr.<region>.amazonaws.com/nextjs-app
+      ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+      ECS_SERVICE: ${{ secrets.ECS_SERVICE }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to ECR
+        run: |
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $(echo $ECR_REPO | cut -d'/' -f1)
+
+      - name: Build image
+        run: |
+          docker build -t $ECR_REPO:$IMAGE_TAG .
+
+      - name: Push image
+        run: |
+          docker push $ECR_REPO:$IMAGE_TAG
+
+      - name: Deploy to ECS (register task / update service)
+        run: |
+          set -e
+          TASK_DEF_JSON=$(aws ecs describe-task-definition --task-definition $(aws ecs list-task-definitions --family-prefix $(basename $ECR_REPO) --sort DESC --max-items 1 | jq -r '.taskDefinitionArns[0]') --region $AWS_REGION)
+          # replace the image in containerDefinitions[0].image
+          NEW_TASK_DEF=$(echo "$TASK_DEF_JSON" | jq --arg IMAGE "$ECR_REPO:$IMAGE_TAG" '.taskDefinition | .containerDefinitions[0].image=$IMAGE | del(.status, .revision, .compatibilities, .registeredAt, .registeredBy)')
+          echo "$NEW_TASK_DEF" > new-task-def.json
+          aws ecs register-task-definition --cli-input-json file://new-task-def.json --region $AWS_REGION
+          NEW_REV=$(aws ecs list-task-definitions --family-prefix $(basename $ECR_REPO) --sort DESC --max-items 1 --region $AWS_REGION | jq -r '.taskDefinitionArns[0]')
+          aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE --force-new-deployment --region $AWS_REGION
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}

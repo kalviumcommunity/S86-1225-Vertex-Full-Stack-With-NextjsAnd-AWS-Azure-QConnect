@@ -338,6 +338,88 @@ Migration note: After pulling these changes you must run `npx prisma migrate dev
 
 If you’d like, I can also add a small integration test suite or a Postman collection for these auth endpoints.
 
+---
+
+## Cloud Secret Management (AWS Secrets Manager) 🔐
+
+**Overview:** For production, store sensitive environment variables (e.g., `DATABASE_URL`, `JWT_SECRET`) in **AWS Secrets Manager** rather than keeping them in `.env` files. Secrets Manager encrypts secrets at rest and supports IAM-based, least-privilege access and automatic rotation.
+
+**Create a secret:**
+- Console: Secrets Manager → Store a new secret → Other type of secret → add JSON key/value pairs (e.g., `{"DATABASE_URL":"postgresql://...","JWT_SECRET":"..."}`)
+- Name it (example): `nextjs/app-secrets` and note the **ARN**.
+
+**Grant least-privilege access:**
+- Create an IAM Role for ECS tasks with `secretsmanager:GetSecretValue` on the secret ARN.
+
+**Retrieval (server-side):**
+- This repo includes `src/lib/secrets.ts` which will fetch the secret when `SECRET_ARN` and `AWS_REGION` env vars are set. Locally it falls back to `process.env` for `DATABASE_URL` / `JWT_SECRET`.
+- Install the AWS Secrets Manager client:
+
+```bash
+npm install @aws-sdk/client-secrets-manager
+```
+
+**Validate:**
+- Use the API route `GET /api/secrets` to confirm keys are visible (the route returns secret keys only, not values).
+
+```bash
+# Locally (uses process.env when SECRET_ARN not set):
+curl -s http://localhost:3000/api/secrets | jq
+
+# In prod with SECRET_ARN set in task / environment, call the same endpoint and ensure keys appear
+curl -s https://<your-app-url>/api/secrets | jq
+```
+
+**Rotation & policy:**
+- Use Secrets Manager rotation with a Lambda for DB credentials or rotate keys monthly/quarterly depending on sensitivity.
+- Document rotation ownership and timeline in this README.
+
+---
+
+## Container Deployment (AWS ECS - Fargate) 🚀
+
+**Docker:** A multi-stage `Dockerfile` is included to produce a small production image (see `Dockerfile`). `.dockerignore` excludes `.env` and build artifacts.
+
+**ECR:** Create an ECR repository (e.g., `nextjs-app`) and push the image. The provided GitHub Actions workflow (`.github/workflows/deploy-ecs.yml`) builds the image, pushes to ECR and updates your ECS service.
+
+**ECS Task & Service (recommended starter settings):**
+- CPU: 256 (0.25 vCPU)
+- Memory: 512 MB
+- Port: 3000
+- Health check: HTTP GET / (use ALB health checks or container health checks)
+- Auto-scaling: scale 1 → 3 tasks by CPU or request-based metrics
+
+**Injecting secrets into task definition (ECS / Fargate):**
+You can map Secrets Manager keys directly into container env vars in the task definition's `secrets` field.
+
+Example (snippet of container definition):
+
+```json
+"secrets": [
+  {
+    "name": "DATABASE_URL",
+    "valueFrom": "arn:aws:secretsmanager:region:account-id:secret:nextjs/app-secrets:jsonkey:DATABASE_URL::"
+  },
+  {
+    "name": "JWT_SECRET",
+    "valueFrom": "arn:aws:secretsmanager:region:account-id:secret:nextjs/app-secrets:jsonkey:JWT_SECRET::"
+  }
+]
+```
+
+**GitHub Actions / CI:**
+- Add these Secrets to GitHub repo: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ECR_REPO`, `ECS_CLUSTER`, `ECS_SERVICE`.
+- The workflow triggers on push to `main` and `branch-34` (adjust branches as needed).
+
+**Validation:**
+- After deployment, verify the ECS Service is healthy and the task is running. Visit your public URL / load balancer and check app logs.
+
+**Reflections / Tips:**
+- Use lightweight base images (alpine), prune dev deps in the build stage, and keep your image small to reduce cold-start times.
+- Use ALB health checks and enable `forceNewDeployment` on updates to ensure a clean rollout.
+- For high-traffic production, tune CPU/memory and use container metrics to guide autoscaling thresholds.
+
+
 ### Example: Refresh flow (curl)
 1) Login (sets cookies):
 
