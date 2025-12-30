@@ -37,7 +37,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ---
 
-## Database Migrations & Seeding ✅
+## Database Migrations and Seeding ✅
 
 This project uses Prisma for database schema migrations and reproducible seeding.
 
