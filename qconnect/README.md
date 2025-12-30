@@ -420,6 +420,54 @@ Example (snippet of container definition):
 - For high-traffic production, tune CPU/memory and use container metrics to guide autoscaling thresholds.
 
 
+## Domain & SSL (Route 53 + ACM) 🔒
+
+**Overview:** Configure a custom domain via **Route 53** and secure traffic with an **AWS Certificate Manager (ACM)** public certificate. Attach the certificate to your Load Balancer (ALB) or CloudFront distribution so users access your app over HTTPS.
+
+**Register or connect a domain:**
+- If you own a domain, change its nameservers to the ones provided by Route 53 (Hosted Zone → NS records). If not, register via Route 53 or your registrar.
+
+**Create a Hosted Zone:**
+1. Route 53 → Hosted Zones → Create Hosted Zone → enter `example.com`.
+2. Copy NS records and update your registrar to point to Route 53 nameservers.
+
+**Request a public certificate (ACM) with DNS validation:**
+- ACM → Request certificate → Public certificate → add `example.com` and `*.example.com` → DNS validation.
+- ACM will provide a CNAME validation record; create it in Route 53 (Record type: CNAME) and wait for the status to change to **Issued**.
+
+**Attach certificate to your ALB / CloudFront:**
+- ALB: Create / Edit listener on port 443, select the ACM certificate, and ensure you have an HTTP → HTTPS redirect rule on port 80 that redirects to 443 (HTTP 301 or 302).
+- CloudFront: Configure the distribution to use the ACM certificate (in us-east-1 for CloudFront) and point origin to your ALB or ECS service endpoint.
+
+**Route 53 records (example):**
+- Root A record (Alias) → points to ALB DNS name (choose Alias yes)
+- `www` CNAME → `example.com`
+
+**Force HTTPS & HSTS:**
+- At the ALB level: Add a listener rule to redirect HTTP (80) → HTTPS (443).
+- Application-level: Set `ENFORCE_HTTPS=true` and consider enabling `ENABLE_HSTS=true` in your task env to add HSTS headers (the middleware already sets Strict-Transport-Security when `ENABLE_HSTS` is true or in production).
+
+**Validation checklist:**
+- [ ] DNS A/ALIAS records point to load balancer and have propagated (use `dig`/`nslookup`).
+- [ ] ACM certificate status is **Issued**.
+- [ ] ALB listener on 443 uses the ACM certificate and health checks pass.
+- [ ] Visiting https://example.com shows the padlock 🔒 and the browser Security tab shows a valid certificate.
+- [ ] Run SSL checks: https://www.ssllabs.com/ssltest/ (score A+ recommended)
+
+**Automation & renewal:**
+- ACM public certificates are provisioned and renewed automatically when validated via DNS (no manual renewal step required).
+
+**Notes & troubleshooting:**
+- If using CloudFront, request the certificate in `us-east-1` and use DNS validation there.
+- If the certificate stays in **Pending validation**, ensure the CNAME validation record exists in the correct Route 53 hosted zone and that TTLs have expired.
+- For staging vs production, use subdomains (e.g., `staging.example.com`) and separate certificates or wildcard certificates.
+
+**Screenshot checklist to add to README:**
+- Route 53 Hosted Zone record set (show NS / A records)
+- ACM certificate status (`Issued`)
+- Browser showing HTTPS padlock for `https://example.com`
+
+
 ### Example: Refresh flow (curl)
 1) Login (sets cookies):
 
