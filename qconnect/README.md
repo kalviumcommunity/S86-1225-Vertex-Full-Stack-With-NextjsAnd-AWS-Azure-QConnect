@@ -37,6 +37,51 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ---
 
+## Unit Testing (Jest + React Testing Library) ✅
+
+Unit and component tests are configured with Jest + React Testing Library (RTL). The repository includes a minimal setup and a couple of sample tests to get you started.
+
+Quick overview:
+
+- Dev dependencies to install (examples):
+  - jest, @testing-library/react, @testing-library/jest-dom, @testing-library/user-event, ts-jest, @types/jest, jest-environment-jsdom
+- Scripts in `package.json`:
+  - `npm test` — run Jest
+  - `npm run test:coverage` — run tests with coverage report
+  - `npm run test:watch` — watch mode
+
+Files added to this repo:
+
+- `jest.config.js` — Next-aware Jest config (uses `next/jest`) with a global 80% coverage threshold
+- `jest.setup.ts` — imports `@testing-library/jest-dom`
+- `__tests__/sum.test.ts` — small unit test for `src/lib/sum.ts`
+- `src/components/ui/__tests__/Button.test.tsx` — component test that verifies the existing `Button` component
+- `.github/workflows/test.yml` — CI job that runs tests + coverage on push/PR and fails on unmet coverage thresholds
+
+How to run locally:
+
+1. Install dev dependencies (if not already installed):
+
+```bash
+npm install --save-dev jest @testing-library/react @testing-library/jest-dom @testing-library/user-event ts-jest @types/jest jest-environment-jsdom
+```
+
+2. Run tests:
+
+```bash
+npm test
+# or
+npm run test:coverage
+```
+
+If coverage thresholds (80%) are not met, Jest will fail the run; the CI workflow enforces the same command for PRs and pushes.
+
+Notes & next steps:
+- Add more tests under `src/` as you grow the codebase (unit + integration). Consider MSW for network mocking and Playwright/Cypress for end-to-end tests.
+- Optionally add a coverage badge once CI is reporting coverage.
+
+---
+
 ## Database Migrations and Seeding ✅
 
 This project uses Prisma for database schema migrations and reproducible seeding.

@@ -14,7 +14,10 @@
     "demo:transaction": "ts-node prisma/transactionDemo.ts",
     "check:headers": "node scripts/check-headers.js",
     "check:db": "node scripts/check-db.js",
-    "verify:upload": "node scripts/verify-upload.js"
+    "verify:upload": "node scripts/verify-upload.js",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "@prisma/client": "^7.1.0",
@@ -44,7 +47,14 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "jest": "^29.6.0",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/user-event": "^14.6.0",
+    "ts-jest": "^29.0.0",
+    "@types/jest": "^29.5.0",
+    "jest-environment-jsdom": "^29.6.0"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
