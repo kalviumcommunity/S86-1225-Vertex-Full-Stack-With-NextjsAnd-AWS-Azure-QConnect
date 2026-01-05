@@ -78,7 +78,28 @@ If coverage thresholds (80%) are not met, Jest will fail the run; the CI workflo
 
 Notes & next steps:
 - Add more tests under `src/` as you grow the codebase (unit + integration). Consider MSW for network mocking and Playwright/Cypress for end-to-end tests.
-- Optionally add a coverage badge once CI is reporting coverage.
+
+### Integration tests for API routes
+
+We recommend writing integration tests that call your App Router `route.ts` handlers directly. These tests should:
+
+- Mock external dependencies (Prisma, Redis, email clients, etc.) with Jest mocks
+- Construct a `Request` (e.g., `new Request('http://localhost/api/contact', {...})`) and call the exported handler (e.g., `await POST(req)`)
+- Assert on the returned `Response` / JSON payload and status codes
+
+Example files added to this repo:
+- `__tests__/api/contact.test.ts` — integration tests that call `src/app/api/contact/route.ts` and mock `sendEmail`
+- `__tests__/api/users.test.ts` — integration tests that mock `prisma` and `redis` and verify authorization and caching behavior
+
+Run integration tests the same as unit tests (they live under `__tests__`):
+
+```bash
+npm test
+# or filter only api tests
+npx jest "__tests__/api"
+```
+
+- Option: add a dedicated `test:integration` script if you want to run them separately.
 
 ---
 
