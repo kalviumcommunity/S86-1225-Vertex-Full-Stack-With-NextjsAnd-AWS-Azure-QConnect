@@ -17,7 +17,8 @@
     "verify:upload": "node scripts/verify-upload.js",
     "test": "jest",
     "test:coverage": "jest --coverage",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:smoke": "jest __smoke_tests__ --runInBand --testTimeout=10000"
   },
   "dependencies": {
     "@prisma/client": "^7.1.0",

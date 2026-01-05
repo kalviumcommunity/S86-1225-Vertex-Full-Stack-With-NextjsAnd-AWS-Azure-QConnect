@@ -40,12 +40,64 @@ jobs:
       - name: Build Next.js app
         run: npm run build
 
+  post-deploy-verify:
+    runs-on: ubuntu-latest
+    needs: build-test-deploy
+    if: github.ref == 'refs/heads/main'
+    env:
+      DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      ECR_REPO: ${{ secrets.ECR_REPO }}
+      ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+      ECS_SERVICE: ${{ secrets.ECS_SERVICE }}
+    steps:
+      - name: Wait for deployment stabilization
+        run: |
+          echo "Waiting 20s for deployed service to stabilize..."
+          sleep 20
+
+      - name: Verify Deployment (health check)
+        id: verify
+        run: |
+          if [ -z "${{ env.DEPLOY_URL }}" ]; then
+            echo "DEPLOY_URL not set; failing verification"; exit 1;
+          fi
+          echo "Checking ${DEPLOY_URL}/api/health"
+          curl --fail --silent --show-error "${DEPLOY_URL}/api/health" | jq .
+
+      - name: Run Smoke Tests
+        id: smoke
+        run: |
+          echo "Running smoke tests against ${DEPLOY_URL}"
+          TARGET_URL=${DEPLOY_URL} npm run test:smoke
+
+      - name: Rollback to previous task definition (on failure)
+        if: ${{ failure() }}
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ECR_REPO: ${{ secrets.ECR_REPO }}
+          ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+          ECS_SERVICE: ${{ secrets.ECS_SERVICE }}
+        run: |
+          set -e
+          echo "Attempting rollback: finding previous task definition for family $(basename ${ECR_REPO})"
+          PREV_TASK_ARN=$(aws ecs list-task-definitions --family-prefix $(basename ${ECR_REPO}) --sort DESC --max-items 2 --region ${AWS_REGION} | jq -r '.taskDefinitionArns[1]')
+          if [ -z "$PREV_TASK_ARN" ] || [ "$PREV_TASK_ARN" == "null" ]; then
+            echo "No previous task definition found — cannot rollback automatically"; exit 1;
+          fi
+          echo "Rolling back service ${ECS_SERVICE} on cluster ${ECS_CLUSTER} to ${PREV_TASK_ARN}"
+          aws ecs update-service --cluster ${ECS_CLUSTER} --service ${ECS_SERVICE} --task-definition ${PREV_TASK_ARN} --force-new-deployment --region ${AWS_REGION}
+          echo "Rollback command issued."
+
       - name: Deploy (placeholder)
         if: github.ref == 'refs/heads/main'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
+          ECR_REPO: ${{ secrets.ECR_REPO }}
+          ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+          ECS_SERVICE: ${{ secrets.ECS_SERVICE }}
         run: |
           echo "Deployment step placeholder — replace with your deployment commands (e.g., aws cli, deploy-ecs.yml or other workflows)."
           echo "For ECS deployment, you can reuse or call the existing .github/workflows/deploy-ecs.yml which is already in this repo."
