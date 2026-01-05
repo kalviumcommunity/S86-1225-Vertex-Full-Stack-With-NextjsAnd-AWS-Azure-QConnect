@@ -1,0 +1,107 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "QConnect API",
+    "version": "1.0.0",
+    "description": "OpenAPI spec (subset) for the QConnect Next.js API. This file is intended to be a reference and developer-friendly quick-start. Generated: 2026-01-05",
+    "contact": {
+      "name": "QConnect Dev Team"
+    }
+  },
+  "servers": [
+    { "url": "http://localhost:3000", "description": "Local" },
+    { "url": "https://{your-deploy-url}", "description": "Production (replace {your-deploy-url})", "variables": { "your-deploy-url": { "default": "app.example.com" } } }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Returns basic liveness information",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Health" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/contact": {
+      "post": {
+        "summary": "Contact form",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ContactRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Message received", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } },
+          "400": { "description": "Validation Error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ValidationError" } } } }
+        }
+      }
+    },
+    "/api/users": {
+      "get": {
+        "summary": "List users",
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10 } },
+          { "name": "q", "in": "query", "schema": { "type": "string" } },
+          { "name": "x-user-email", "in": "header", "required": true, "schema": { "type": "string" }, "description": "Auth header used by middleware in tests" }
+        ],
+        "responses": {
+          "200": { "description": "Users list", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UsersList" } } } },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      },
+      "post": {
+        "summary": "Create user",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserCreate" } } } },
+        "responses": { "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } } }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Login (example)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } } } },
+        "responses": { "200": { "description": "Login success", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } }, "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Health": {
+        "type": "object",
+        "properties": { "status": { "type": "string" }, "uptime": { "type": "number" } }
+      },
+      "ContactRequest": {
+        "type": "object",
+        "required": ["name", "email", "message"],
+        "properties": { "name": { "type": "string" }, "email": { "type": "string", "format": "email" }, "message": { "type": "string" } }
+      },
+      "User": {
+        "type": "object",
+        "properties": { "id": { "type": "integer" }, "name": { "type": "string" }, "email": { "type": "string" }, "phone": { "type": "string" }, "role": { "type": "string" } }
+      },
+      "UsersList": {
+        "type": "object",
+        "properties": { "page": { "type": "integer" }, "limit": { "type": "integer" }, "total": { "type": "integer" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/User" } }, "meta": { "type": "object" } }
+      },
+      "UserCreate": {
+        "type": "object",
+        "required": ["name", "email"],
+        "properties": { "name": { "type": "string" }, "email": { "type": "string", "format": "email" }, "phone": { "type": "string" }, "role": { "type": "string" } }
+      },
+      "LoginRequest": { "type": "object", "required": ["email", "password"], "properties": { "email": { "type": "string" }, "password": { "type": "string" } } },
+      "SuccessResponse": { "type": "object", "properties": { "success": { "type": "boolean" }, "message": { "type": "string" }, "data": { "type": ["object", "array", "null"] } } },
+      "ErrorResponse": { "type": "object", "properties": { "success": { "type": "boolean" }, "message": { "type": "string" }, "error": { "type": "object" } } },
+      "ValidationError": { "allOf": [ { "$ref": "#/components/schemas/ErrorResponse" }, { "type": "object", "properties": { "error": { "type": "object", "properties": { "code": { "type": "string" }, "details": { "type": "array", "items": { "type": "object", "properties": { "field": { "type": "string" }, "message": { "type": "string" } } } } } } } ] }
+    }
+  }
+}
