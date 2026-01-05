@@ -474,16 +474,73 @@ Example (snippet of container definition):
 ```
 
 **GitHub Actions / CI:**
-- Add these Secrets to GitHub repo: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ECR_REPO`, `ECS_CLUSTER`, `ECS_SERVICE`.
-- The workflow triggers on push to `main` and `branch-34` (adjust branches as needed).
+- Add these Secrets to your GitHub repo: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ECR_REPO`, `ECS_CLUSTER`, `ECS_SERVICE`.
+- This repository now includes a comprehensive CI workflow at `.github/workflows/ci.yml` which runs **Lint → Test → Build → Deploy (placeholder)** on push and pull requests for `main` and `develop` branches.
+
+**CI workflow highlights**
+- Lint: runs `npm run lint` (ESLint) to check code style and quality
+- Test: runs `npm test -- --coverage` (Jest + RTL). Coverage thresholds are enforced in `jest.config.js` (80% global)
+- Build: runs `npm run build` to ensure the Next.js app compiles
+- Deploy: placeholder step runs only on `main` (replace with actual deploy commands or integrate with `deploy-ecs.yml` provided in this repo)
+
+**Docker Build & Push (ECR)**
+
+This repo includes a dedicated workflow to build a Docker image and push it to Amazon ECR:
+
+- Workflow path: `.github/workflows/docker-build-push.yml`
+- What it does:
+  - Checks out code and configures AWS credentials from GitHub Secrets
+  - Logs into ECR and builds the Docker image with `docker/build-push-action`
+  - Tags the image with the git SHA and `latest`, then pushes both tags to your ECR repo
+- Required GitHub Secrets:
+  - `AWS_ACCESS_KEY_ID`
+  - `AWS_SECRET_ACCESS_KEY`
+  - `AWS_REGION`
+  - `ECR_REPO` (e.g., `123456789012.dkr.ecr.us-east-1.amazonaws.com/your-repo`)
+
+**How it triggers**
+- Runs on push to `main` and can be triggered manually via the `workflow_dispatch` event.
+- The pushed image tags are `${ECR_REPO}:${GITHUB_SHA}` and `${ECR_REPO}:latest`.
+
+**Integration with ECS deployment**
+- The repo already contains `.github/workflows/deploy-ecs.yml` which registers task definitions and updates the ECS service. You can either run that workflow directly or have this workflow trigger it once the image is pushed (for example via a repository_dispatch or by updating task definitions).
+
+**Optimization & Safety**
+- Caching: the build workflow uses inline cache and the registry as a cache source to speed rebuilds
+- Concurrency: the workflow cancels in-progress runs on the same ref to avoid overlapping deploys
+- Secrets: Do NOT hardcode secrets in workflows. Use GitHub Secrets and reference them as `${{ secrets.YOUR_SECRET }}`.
+
+**Validation & Monitoring**
+- After a push, open GitHub → Actions → Docker Build & Push to inspect the build and push logs.
+- Confirm your image appears in ECR (AWS Console → ECR → Repositories → <your-repo> → Images).
+
+**Next steps / Recommendations**
+- Optionally trigger `deploy-ecs.yml` after a successful image push to automate full deploys (use repository dispatch or call the ECS deploy job from this workflow).
+- Add an image digest or tag metadata into your release notes or CI artifacts for traceability.
+
+**Example quick test (local)**
+```bash
+# Build locally
+docker build -t <ECR_REPO>:local-test .
+# Push (after authenticating with AWS/ECR)
+# docker push <ECR_REPO>:local-test
+```
+
+**Reflections**
+- Automating Docker builds in CI reduces manual steps and keeps production images reproducible.
+- Using the registry and inline caching improves incremental rebuild speeds and reduces CI time.
+
 
 **Validation:**
-- After deployment, verify the ECS Service is healthy and the task is running. Visit your public URL / load balancer and check app logs.
+- After a push, go to GitHub → Actions → CI Pipeline and inspect the run. A successful run shows green checks for each step and a coverage report in the logs.
 
 **Reflections / Tips:**
-- Use lightweight base images (alpine), prune dev deps in the build stage, and keep your image small to reduce cold-start times.
-- Use ALB health checks and enable `forceNewDeployment` on updates to ensure a clean rollout.
-- For high-traffic production, tune CPU/memory and use container metrics to guide autoscaling thresholds.
+- Consider splitting long-running stages (e.g., e2e tests) into separate jobs or workflows and using artifacts to pass build outputs between jobs.
+- Once CI is stable, add a coverage badge to the README and require the workflow to pass for protected branches.
+
+**Next steps (Optional):**
+- Replace the Deploy placeholder with actual deployment steps (AWS CLI / ECS deploy or Azure Web App), or trigger `deploy-ecs.yml` from this workflow via a repository dispatch.
+- Add parallel jobs for lint and tests to reduce CI runtime.
 
 
 ## Domain & SSL (Route 53 + ACM) 🔒
