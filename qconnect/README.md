@@ -271,6 +271,32 @@ If you'd like, I can also add an automated Postman collection file or example re
 
 ---
 
+## API Docs & Architecture 📚
+
+This repository includes interactive API docs and a high-level architecture overview to help contributors and integrators onboard quickly.
+
+- **Swagger UI (OpenAPI)** — Static Swagger UI is available at `/docs` and loads the OpenAPI JSON at `/api-docs/openapi.json` (subset of endpoints and schemas). Use it to explore request/response examples and try endpoints against your local or deployed server.
+
+- **Postman collection** — A minimal Postman collection is available at `docs/postman_collection.json` for quick import into Postman (variable `base_url` provided).
+
+- **Architecture doc** — See `ARCHITECTURE.md` for a system overview, directory layout, data flow, deployment architecture, CI/CD notes, and maintenance guidance.
+
+- **Version & last update** — API docs version: `1.0.0`. Last updated: 2026-01-05.
+
+How to use locally:
+
+1. Start your app (`npm run dev`) and visit: `http://localhost:3000/docs`
+2. Import `docs/postman_collection.json` into Postman and set `base_url` to `http://localhost:3000`.
+
+How to update docs:
+- Edit `public/api-docs/openapi.json` (or regenerate it from JSDoc / a generator), then commit the changes.
+- Update `docs/postman_collection.json` and `ARCHITECTURE.md` to reflect new endpoints or architectural changes.
+
+---
+
+
+---
+
 ## Unified API Response Format 🔁
 
 All API endpoints follow a consistent response envelope to make frontend error handling and logging predictable.

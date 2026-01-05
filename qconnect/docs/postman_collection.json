@@ -1,0 +1,30 @@
+{
+  "info": {
+    "name": "QConnect - Postman Collection (subset)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0",
+    "_postman_id": "qconnect-sample"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/api/health", "host": ["{{base_url}}"], "path": ["api","health"] }
+      }
+    },
+    {
+      "name": "Contact",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{ \"name\": \"Alice\", \"email\": \"alice@example.com\", \"message\": \"Hello\" }" },
+        "url": { "raw": "{{base_url}}/api/contact", "host": ["{{base_url}}"], "path": ["api","contact"] }
+      }
+    }
+  ]
+}
