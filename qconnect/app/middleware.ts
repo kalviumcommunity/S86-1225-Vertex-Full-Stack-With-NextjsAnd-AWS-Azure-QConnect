@@ -50,15 +50,19 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  // API route protection (accept token via Authorization header OR cookie)
-  if (pathname.startsWith("/api/admin") || pathname.startsWith("/api/users")) {
+  // API route protection with Role-Based Access Control (RBAC)
+  if (pathname.startsWith("/api/admin") || pathname.startsWith("/api/users") || 
+      pathname.startsWith("/api/doctors") || pathname.startsWith("/api/appointments")) {
     const authHeader = req.headers.get("authorization");
     const headerToken = authHeader?.split(" ")[1];
     const cookieToken = req.cookies.get("token")?.value;
     const token = headerToken || cookieToken;
 
     if (!token) {
-      const res = NextResponse.json({ success: false, message: "Token missing" }, { status: 401 });
+      const res = NextResponse.json(
+        { success: false, error: "Authorization token is missing", code: "UNAUTHORIZED" },
+        { status: 401 }
+      );
       addCorsHeaders(res, origin);
       addSecurityHeaders(res);
       return res;
@@ -67,15 +71,69 @@ export function middleware(req: NextRequest) {
     try {
       const decoded: any = jwt.verify(token, JWT_SECRET);
 
-      // Role-based access control for admin API
-      if (pathname.startsWith("/api/admin") && decoded.role !== "admin") {
-        const res = NextResponse.json({ success: false, message: "Access denied" }, { status: 403 });
-        addCorsHeaders(res, origin);
-        addSecurityHeaders(res);
-        return res;
+      // Role-based access control (RBAC) for different routes
+      // Admin routes: Only admin role
+      if (pathname.startsWith("/api/admin")) {
+        if (decoded.role !== "admin") {
+          const res = NextResponse.json(
+            { success: false, error: "Access denied. Admin role required.", code: "FORBIDDEN" },
+            { status: 403 }
+          );
+          addCorsHeaders(res, origin);
+          addSecurityHeaders(res);
+          return res;
+        }
+      }
+      
+      // Users routes: Admin or self-access
+      if (pathname.startsWith("/api/users")) {
+        const isDeleteRoute = pathname.includes("/delete");
+        const isPromoteRoute = pathname.includes("/promote");
+        
+        // Only admins can delete or promote users (principle of least privilege)
+        if ((isDeleteRoute || isPromoteRoute) && decoded.role !== "admin") {
+          const res = NextResponse.json(
+            { success: false, error: "Access denied. Admin role required.", code: "FORBIDDEN" },
+            { status: 403 }
+          );
+          addCorsHeaders(res, origin);
+          addSecurityHeaders(res);
+          return res;
+        }
       }
 
-      // Attach user info for downstream handlers
+      // Doctors routes: Authenticated users (any role)
+      if (pathname.startsWith("/api/doctors")) {
+        // Allow all authenticated users to view doctors
+        // Restrict write operations to admins only
+        if ((req.method === "POST" || req.method === "PUT" || req.method === "DELETE") && 
+            decoded.role !== "admin") {
+          const res = NextResponse.json(
+            { success: false, error: "Access denied. Admin role required for this operation.", code: "FORBIDDEN" },
+            { status: 403 }
+          );
+          addCorsHeaders(res, origin);
+          addSecurityHeaders(res);
+          return res;
+        }
+      }
+
+      // Appointments routes: Authenticated users, with restrictions
+      if (pathname.startsWith("/api/appointments")) {
+        // Allow authenticated users to book appointments
+        // Only admins can delete appointments
+        if (req.method === "DELETE" && decoded.role !== "admin") {
+          const res = NextResponse.json(
+            { success: false, error: "Access denied. Admin role required to delete appointments.", code: "FORBIDDEN" },
+            { status: 403 }
+          );
+          addCorsHeaders(res, origin);
+          addSecurityHeaders(res);
+          return res;
+        }
+      }
+
+      // Attach user info to request headers for downstream handlers
       const requestHeaders = new Headers(req.headers);
       requestHeaders.set("x-user-id", String(decoded.id));
       requestHeaders.set("x-user-email", decoded.email);
@@ -85,9 +143,19 @@ export function middleware(req: NextRequest) {
       addCorsHeaders(res, origin);
       addSecurityHeaders(res);
       return res;
-    } catch (err) {
-      // Token invalid/expired — return 401 so clients can attempt refresh
-      const res = NextResponse.json({ success: false, message: "Invalid or expired token" }, { status: 401 });
+    } catch (err: any) {
+      // Handle different JWT errors
+      let message = "Invalid or expired token";
+      if (err.name === "TokenExpiredError") {
+        message = "Authorization token has expired";
+      } else if (err.name === "JsonWebTokenError") {
+        message = "Invalid authorization token";
+      }
+
+      const res = NextResponse.json(
+        { success: false, error: message, code: "UNAUTHORIZED" },
+        { status: 401 }
+      );
       addCorsHeaders(res, origin);
       addSecurityHeaders(res);
       return res;
