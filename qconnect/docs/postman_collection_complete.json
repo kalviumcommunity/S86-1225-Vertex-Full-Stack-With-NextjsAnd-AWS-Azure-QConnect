@@ -1,0 +1,635 @@
+{
+  "info": {
+    "name": "QConnect - Complete API Collection",
+    "description": "RESTful API testing collection for QConnect medical appointment booking system",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0",
+    "_postman_id": "qconnect-api-collection-2024"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string",
+      "description": "Base URL for QConnect API"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string",
+      "description": "JWT token from login"
+    },
+    {
+      "key": "user_id",
+      "value": "1",
+      "type": "string",
+      "description": "Current user ID"
+    },
+    {
+      "key": "admin_email",
+      "value": "admin@example.com",
+      "type": "string",
+      "description": "Admin user email"
+    },
+    {
+      "key": "admin_role",
+      "value": "admin",
+      "type": "string",
+      "description": "Admin user role"
+    }
+  ],
+  "item": [
+    {
+      "name": "Users",
+      "description": "User management endpoints",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-email",
+                "value": "{{admin_email}}",
+                "type": "text"
+              },
+              {
+                "key": "x-user-role",
+                "value": "{{admin_role}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Retrieve paginated list of all users"
+          }
+        },
+        {
+          "name": "Search Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-email",
+                "value": "{{admin_email}}"
+              },
+              {
+                "key": "x-user-role",
+                "value": "{{admin_role}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users?q=alice&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users"],
+              "query": [
+                { "key": "q", "value": "alice" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Search users by name or email"
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "1"]
+            },
+            "description": "Get specific user by ID"
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Charlie Brown\",\n  \"email\": \"charlie.brown@example.com\",\n  \"phone\": \"+9876543210\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users"]
+            },
+            "description": "Create a new user"
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-email",
+                "value": "{{admin_email}}"
+              },
+              {
+                "key": "x-user-id",
+                "value": "{{user_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice J.\",\n  \"phone\": \"+1111111111\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "1"]
+            },
+            "description": "Update a user (partial update)"
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-user-email",
+                "value": "{{admin_email}}"
+              },
+              {
+                "key": "x-user-id",
+                "value": "{{user_id}}"
+              },
+              {
+                "key": "x-user-role",
+                "value": "{{admin_role}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/43",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "43"]
+            },
+            "description": "Delete a user (admin only or self)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Appointments",
+      "description": "Appointment management endpoints",
+      "item": [
+        {
+          "name": "Get All Appointments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/appointments?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "appointments"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Get paginated list of all appointments"
+          }
+        },
+        {
+          "name": "Filter Appointments by Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/appointments?status=PENDING&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "appointments"],
+              "query": [
+                { "key": "status", "value": "PENDING" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Filter appointments by status (PENDING, CONFIRMED, COMPLETED, CANCELLED)"
+          }
+        },
+        {
+          "name": "Get Appointments by User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/appointments?userId=10&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "appointments"],
+              "query": [
+                { "key": "userId", "value": "10" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Get appointments for a specific user"
+          }
+        },
+        {
+          "name": "Get Appointment by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/appointments/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "appointments", "1"]
+            },
+            "description": "Get a specific appointment by ID"
+          }
+        },
+        {
+          "name": "Create Appointment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 15,\n  \"queueId\": 3\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/appointments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "appointments"]
+            },
+            "description": "Create a new appointment (uses atomic transaction)"
+          }
+        },
+        {
+          "name": "Update Appointment Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"COMPLETED\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/appointments/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "appointments", "1"]
+            },
+            "description": "Update appointment status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Doctors",
+      "description": "Doctor management endpoints",
+      "item": [
+        {
+          "name": "Get All Doctors",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/doctors?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "doctors"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Get paginated list of all doctors"
+          }
+        },
+        {
+          "name": "Search Doctors",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/doctors?q=cardio&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "doctors"],
+              "query": [
+                { "key": "q", "value": "cardio" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Search doctors by name (case-insensitive)"
+          }
+        },
+        {
+          "name": "Get Doctor by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/doctors/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "doctors", "1"]
+            },
+            "description": "Get a specific doctor by ID"
+          }
+        },
+        {
+          "name": "Create Doctor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dr. Michael Chen\",\n  \"specialization\": \"Neurology\",\n  \"email\": \"michael.chen@hospital.com\",\n  \"phone\": \"+9876543210\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/doctors",
+              "host": ["{{base_url}}"],
+              "path": ["api", "doctors"]
+            },
+            "description": "Create a new doctor"
+          }
+        },
+        {
+          "name": "Update Doctor",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specialization\": \"Cardiology & Interventional Cardiology\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/doctors/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "doctors", "1"]
+            },
+            "description": "Update doctor information"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "description": "Authentication endpoints",
+      "item": [
+        {
+          "name": "Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New Patient\",\n  \"email\": \"patient@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/signup",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "signup"]
+            },
+            "description": "Register a new user"
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login user and get JWT token",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "  var jsonData = pm.response.json();",
+                    "  pm.environment.set('auth_token', jsonData.data.token);",
+                    "  pm.environment.set('user_id', jsonData.data.id);",
+                    "}"
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Get current authenticated user profile"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error Handling Tests",
+      "description": "Test error scenarios and edge cases",
+      "item": [
+        {
+          "name": "Invalid User ID (404)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/9999",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "9999"]
+            },
+            "description": "Test 404 error response"
+          }
+        },
+        {
+          "name": "Invalid Email (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Invalid User\",\n  \"email\": \"not-an-email\",\n  \"phone\": \"+1234567890\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users"]
+            },
+            "description": "Test 400 validation error response"
+          }
+        },
+        {
+          "name": "Unauthorized Delete (403)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-user-email",
+                "value": "user@example.com"
+              },
+              {
+                "key": "x-user-id",
+                "value": "100"
+              },
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "1"]
+            },
+            "description": "Test 403 forbidden (RBAC) response"
+          }
+        },
+        {
+          "name": "Missing Auth Headers (401)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users"]
+            },
+            "description": "Test 401 unauthorized (missing headers)"
+          }
+        }
+      ]
+    }
+  ]
+}
