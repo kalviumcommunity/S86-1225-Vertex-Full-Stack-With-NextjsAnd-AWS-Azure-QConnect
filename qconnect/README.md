@@ -14,6 +14,10 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 - [Database Migrations & Seeding](#database-migrations-and-seeding-✅) - _In this README_
 - **[DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)** - _Navigation guide for all documentation_
 - **[INPUT_VALIDATION_ZOD.md](INPUT_VALIDATION_ZOD.md)** - _Input validation with Zod schemas_ 🔐
+- **[START_HERE_AUTHENTICATION.md](START_HERE_AUTHENTICATION.md)** - _Quick authentication quick start (5-minute guide)_ 🚀
+- **[AUTHENTICATION_IMPLEMENTATION.md](AUTHENTICATION_IMPLEMENTATION.md)** - _Complete authentication implementation guide_ 🔒
+- **[AUTHENTICATION_QUICK_REFERENCE.md](AUTHENTICATION_QUICK_REFERENCE.md)** - _Quick reference for testing & configuration_ ⚡
+- **[CONCEPT_2_20_COMPLETE.md](CONCEPT_2_20_COMPLETE.md)** - _Authentication APIs implementation summary_ ✅
 - **[GLOBAL_API_RESPONSE_HANDLER.md](GLOBAL_API_RESPONSE_HANDLER.md)** - _Global response handler implementation guide_
 - **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)** - _Comprehensive migration workflows & production safety_
 - **[MIGRATIONS_AND_SEEDING.md](MIGRATIONS_AND_SEEDING.md)** - _Complete implementation evidence & testing_
