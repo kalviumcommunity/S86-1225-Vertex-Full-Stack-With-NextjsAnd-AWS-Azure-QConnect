@@ -13,6 +13,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 ### 📚 Documentation
 - [Database Migrations & Seeding](#database-migrations-and-seeding-✅) - _In this README_
 - **[DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)** - _Navigation guide for all documentation_
+- **[GLOBAL_API_RESPONSE_HANDLER.md](GLOBAL_API_RESPONSE_HANDLER.md)** - _Global response handler implementation guide_
 - **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)** - _Comprehensive migration workflows & production safety_
 - **[MIGRATIONS_AND_SEEDING.md](MIGRATIONS_AND_SEEDING.md)** - _Complete implementation evidence & testing_
 - **[MIGRATIONS_CHECKLIST.md](MIGRATIONS_CHECKLIST.md)** - _Deliverables checklist & verification_
@@ -20,6 +21,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 - [Unit Testing Guide](#unit-testing-jest--react-testing-library-✅)
 - [Integration Testing Guide](#integration-tests-for-api-routes)
 - [API Routes & Naming](#api-routes--naming-🧭)
+- [Global API Response Format](#unified-api-response-format-🔁) - _Unified response handler & error codes_
 - [Cloud Database Configuration](#cloud-database-configuration-rds--azure-database-for-postgresql-☁️🐘)
 - [Transactions & Query Optimization](#transactions--query-optimization-🔧)
 - [Architecture Overview](ARCHITECTURE.md)
@@ -1030,20 +1032,24 @@ How to update docs:
 
 ## Unified API Response Format 🔁
 
-All API endpoints follow a consistent response envelope to make frontend error handling and logging predictable.
+All API endpoints follow a consistent, predictable response envelope to ensure every API endpoint returns responses in a consistent, structured, and predictable format. This unified approach improves developer experience (DX), simplifies error debugging, and strengthens observability in production environments.
 
-Success response format:
+**📚 Detailed Documentation:** See [GLOBAL_API_RESPONSE_HANDLER.md](GLOBAL_API_RESPONSE_HANDLER.md) for comprehensive implementation guide, examples, monitoring integration, and best practices.
+
+### Response Format
+
+**Success Response Example:**
 
 ```json
 {
   "success": true,
   "message": "User created successfully",
-  "data": { "id": 12, "name": "Charlie" },
+  "data": { "id": 12, "name": "Charlie", "email": "charlie@example.com" },
   "timestamp": "2025-10-30T10:00:00Z"
 }
 ```
 
-Error response format:
+**Error Response Example:**
 
 ```json
 {
@@ -1054,24 +1060,61 @@ Error response format:
 }
 ```
 
-Utility files:
-- `src/lib/responseHandler.ts` — `sendSuccess()` and `sendError()` helpers used across routes
-- `src/lib/errorCodes.ts` — canonical error codes (e.g. `VALIDATION_ERROR: 'E001'`, `NOT_FOUND: 'E002'`)
+### Error Codes Reference
 
-Usage example in routes (already applied to `/api/users`, `/api/appointments`, etc.):
+Standardized error codes used across all endpoints:
+
+| Code | Value | Use Case |
+|------|-------|----------|
+| VALIDATION_ERROR | E001 | Invalid input, missing required fields |
+| NOT_FOUND | E002 | Resource doesn't exist |
+| DATABASE_FAILURE | E003 | Database operation failed |
+| INTERNAL_ERROR | E500 | Unexpected server error |
+| UNAUTHORIZED | E401 | Missing authentication or no permission |
+
+### Core Utility Files
+
+- **`src/lib/responseHandler.ts`** — Exports `sendSuccess()` and `sendError()` functions used across all 18+ routes
+- **`src/lib/errorCodes.ts`** — Defines canonical error codes (e.g., `VALIDATION_ERROR: 'E001'`, `NOT_FOUND: 'E002'`)
+
+### Usage Example
+
+Applied across routes: `/api/users`, `/api/doctors`, `/api/appointments`, `/api/auth`, `/api/email`, `/api/queues`, and more:
 
 ```ts
-// example
 import { sendSuccess, sendError } from "@/lib/responseHandler";
 import { ERROR_CODES } from "@/lib/errorCodes";
 
-if (!body.title) return sendError("Missing required field: title", ERROR_CODES.VALIDATION_ERROR, 400);
-return sendSuccess(createdTask, "Task created", 201);
+// Validation Error Example
+if (!body.name) {
+  return sendError("Missing required field: name", ERROR_CODES.VALIDATION_ERROR, 400);
+}
+
+// Success Response Example (POST)
+return sendSuccess(createdUser, "User created successfully", 201);
+
+// Success Response Example (GET)
+return sendSuccess(users, "Users fetched successfully", 200);
+
+// Error Response Example
+return sendError("Failed to fetch user", ERROR_CODES.DATABASE_FAILURE, 500, error.message);
 ```
 
-Why this helps:
-- Improves DX: frontend sees the same shape for success and errors
-- Observability: errors include machine-friendly codes and timestamps for tracing
+### Developer Experience & Observability Benefits
+
+✅ **Predictable Response Structure** — Frontend developers always know the shape of responses  
+✅ **Simplified Error Handling** — All errors follow the same pattern with error codes  
+✅ **Easier Debugging** — Every response includes timestamp, error code, and detailed messages  
+✅ **Monitoring Integration** — Timestamps and error codes enable integration with Sentry, Datadog, CloudWatch  
+✅ **Observability** — Consistent format enables automated error tracking and performance metrics  
+
+### Implemented Routes (18+ endpoints)
+
+- ✅ Users: GET, POST, GET/:id, PATCH/:id, DELETE/:id
+- ✅ Doctors: GET, POST, GET/:id, PATCH/:id, DELETE/:id  
+- ✅ Appointments: GET, POST, GET/:id, PATCH/:id, DELETE/:id
+- ✅ Authentication: POST /signup, POST /login, GET /me
+- ✅ Email, Queues, Files: All using unified handler
 
 ---
 
