@@ -1278,4 +1278,532 @@ export const fetcher = async (url: string) => {
 
 ---
 
+## Email Service Integration ✉️
+
+QConnect integrates transactional email functionality using either **AWS SES** or **SendGrid**. This system sends automated notifications for critical events like user signups, password resets, appointment reminders, and security alerts.
+
+### Why Transactional Emails Matter
+
+Transactional emails are essential for user engagement and trust. Unlike marketing emails, they are **trigger-based** and sent automatically in response to user actions:
+
+| Event | Email Type | Purpose |
+|-------|-----------|---------|
+| User signs up | Welcome email | Confirm account creation |
+| Password reset request | Reset link | Enable account recovery |
+| Appointment scheduled | Confirmation | Notify doctor & patient |
+| Appointment reminder | Reminder | Reduce no-shows |
+| Security event | Alert | Protect account |
+
+### Choosing Your Provider
+
+Both AWS SES and SendGrid are production-ready. Choose based on your needs:
+
+| Feature | AWS SES | SendGrid |
+|---------|---------|----------|
+| **Pricing** | Pay-per-email ($0.10/1000) | Free tier (100/day), then $0.0001/email |
+| **Setup** | Requires AWS account + domain verification | Create account + API key |
+| **Ideal for** | Backend automation at scale | Rapid development, small volume |
+| **Sandbox Mode** | Requires email verification | Full API access |
+| **Bounce Handling** | SNS notifications | Event API |
+
+### Setup & Configuration
+
+#### Option A: AWS SES Setup
+
+1. **Create AWS Account** and navigate to [Simple Email Service (SES)](https://console.aws.amazon.com/ses/)
+
+2. **Verify Email/Domain**:
+   - In sandbox mode: verify individual recipient emails in the AWS SES console
+   - In production: verify your domain (requires DNS records for DKIM/SPF)
+
+3. **Get AWS Credentials**:
+   - Create an IAM user with `AmazonSESFullAccess` policy
+   - Generate access key + secret key
+
+4. **Add to `.env`**:
+   ```bash
+   EMAIL_PROVIDER=ses
+   AWS_REGION=ap-south-1
+   AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+   AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+   SES_EMAIL_SENDER=no-reply@yourdomain.com
+   ```
+
+5. **Install Dependencies**:
+   ```bash
+   npm install @aws-sdk/client-ses
+   ```
+
+#### Option B: SendGrid Setup
+
+1. **Create SendGrid Account** at [sendgrid.com](https://sendgrid.com)
+
+2. **Verify Sender Email**:
+   - Go to Settings → Sender Authentication
+   - Verify your email address or domain
+
+3. **Generate API Key**:
+   - Settings → API Keys
+   - Create "Full Access" API key
+
+4. **Add to `.env`**:
+   ```bash
+   EMAIL_PROVIDER=sendgrid
+   SENDGRID_API_KEY=SG.abc123...
+   SENDGRID_SENDER=no-reply@yourdomain.com
+   ```
+
+5. **Install Dependencies**:
+   ```bash
+   npm install @sendgrid/mail
+   ```
+
+### Email Implementation
+
+#### Email Service Library
+
+The email system is implemented in [src/lib/email.ts](src/lib/email.ts):
+
+```typescript
+import { sendEmail } from "@/lib/email";
+
+// Send an email
+const result = await sendEmail({
+  to: "user@example.com",
+  subject: "Welcome to QConnect",
+  html: "<h3>Hello! 🎉</h3>",
+  from: "no-reply@yourdomain.com" // optional, uses env default
+});
+
+// Result: { success: true, provider: "ses", messageId: "01010189..." }
+```
+
+#### API Route
+
+POST `/api/email` — Send transactional email
+
+**Request**:
+```json
+{
+  "to": "user@example.com",
+  "subject": "Welcome!",
+  "message": "<h3>Hello from QConnect 🚀</h3>"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "provider": "ses",
+  "messageId": "01010189b2example123"
+}
+```
+
+**Test with cURL**:
+```bash
+curl -X POST http://localhost:3000/api/email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "student@example.com",
+    "subject": "Welcome!",
+    "message": "<h3>Hello from QConnect 🚀</h3>"
+  }'
+```
+
+### Email Templates
+
+Pre-built HTML templates are in [src/lib/templates/emailTemplates.ts](src/lib/templates/emailTemplates.ts):
+
+#### Welcome Email
+```typescript
+import { welcomeTemplate } from "@/lib/templates/emailTemplates";
+
+const html = welcomeTemplate("John Doe");
+await sendEmail({
+  to: "john@example.com",
+  subject: "Welcome to QConnect!",
+  html
+});
+```
+
+**Output**:
+```html
+<h2>Welcome to QConnect, John Doe!</h2>
+<p>We're thrilled to have you onboard 🎉</p>
+<p>Start managing your appointments and doctors...</p>
+<a href="https://app.qconnect.local/dashboard">Get Started</a>
+```
+
+#### Password Reset Email
+```typescript
+import { passwordResetTemplate } from "@/lib/templates/emailTemplates";
+
+const resetLink = "https://app.qconnect.local/reset?token=abc123";
+const html = passwordResetTemplate("John Doe", resetLink, 24);
+await sendEmail({
+  to: "john@example.com",
+  subject: "Reset Your Password",
+  html
+});
+```
+
+#### Appointment Reminder Email
+```typescript
+import { appointmentReminderTemplate } from "@/lib/templates/emailTemplates";
+
+const html = appointmentReminderTemplate(
+  "John Doe",
+  "Smith",
+  "Jan 20, 2026 at 2:30 PM",
+  "Consultation - Room 101"
+);
+await sendEmail({
+  to: "john@example.com",
+  subject: "Appointment Reminder",
+  html
+});
+```
+
+#### Security Alert Email
+```typescript
+import { securityAlertTemplate } from "@/lib/templates/emailTemplates";
+
+const html = securityAlertTemplate(
+  "John Doe",
+  "Unusual login from 192.168.1.1",
+  true
+);
+await sendEmail({
+  to: "john@example.com",
+  subject: "Security Alert",
+  html
+});
+```
+
+#### Custom Notification Email
+```typescript
+import { notificationTemplate } from "@/lib/templates/emailTemplates";
+
+const html = notificationTemplate(
+  "John Doe",
+  "Payment Received",
+  "Your appointment payment of $50 was received.",
+  "https://app.qconnect.local/invoices",
+  "View Invoice"
+);
+await sendEmail({
+  to: "john@example.com",
+  subject: "Payment Confirmation",
+  html
+});
+```
+
+### Email Logging & Monitoring
+
+Email sends are logged using [src/lib/emailLogger.ts](src/lib/emailLogger.ts):
+
+```typescript
+import { logEmailSent, logEmailFailed, getEmailStats } from "@/lib/emailLogger";
+
+// Logs are automatically created in sendEmail()
+// Retrieve statistics:
+const stats = getEmailStats();
+console.log(stats);
+// {
+//   totalSent: 42,
+//   successful: 40,
+//   failed: 2,
+//   successRate: "95.24",
+//   byProvider: { ses: 25, sendgrid: 15 }
+// }
+
+// Get recent email logs
+import { getEmailLogs } from "@/lib/emailLogger";
+const logs = getEmailLogs({ status: "success", limit: 10 });
+```
+
+### Testing Email Service
+
+#### Unit Tests
+
+Integration tests for the email API are in `__tests__/api/email.test.ts`:
+
+```bash
+npm test __tests__/api/email.test.ts
+```
+
+Tests cover:
+- ✅ Successful sends via SES and SendGrid
+- ✅ Validation of required fields (to, subject, message)
+- ✅ Error handling and graceful failures
+- ✅ Password reset email flow
+- ✅ Appointment reminder flow
+- ✅ Security alert flow
+
+#### Manual Testing with Postman
+
+1. **Start dev server**: `npm run dev`
+
+2. **Create new POST request** to `http://localhost:3000/api/email`
+
+3. **Set Headers**:
+   ```
+   Content-Type: application/json
+   ```
+
+4. **Body (raw JSON)**:
+   ```json
+   {
+     "to": "test@example.com",
+     "subject": "Test Email",
+     "message": "<h3>Hello Test!</h3>"
+   }
+   ```
+
+5. **Send** and check response:
+   ```json
+   {
+     "success": true,
+     "provider": "ses",
+     "messageId": "01010189b2example123"
+   }
+   ```
+
+6. **Check Console Logs**:
+   ```
+   Email sent (SES): { to: 'test@example.com', messageId: '01010189b2example123' }
+   ```
+
+### Handling Common Issues
+
+#### Problem: Emails Not Delivered
+
+**Cause**: AWS SES sandbox mode or email not verified
+
+**Solution**:
+- If using SES sandbox: add recipient email to verified addresses in AWS console
+- Check spam folder
+- Verify sender email is correct
+- Check email headers for bounces in SES dashboard
+
+#### Problem: "Email Service Unavailable"
+
+**Cause**: Invalid credentials or service rate limit
+
+**Solution**:
+- Verify `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are correct
+- Check AWS region is accessible
+- Verify SendGrid API key is valid
+- Wait 60 seconds before retrying (rate limit)
+
+#### Problem: Slow Email Delivery
+
+**Cause**: Synchronous API calls blocking requests
+
+**Solution**:
+- Use background tasks for bulk sends (implement Redis queue)
+- Implement retry logic with exponential backoff
+- Monitor CloudWatch metrics (AWS SES) or SendGrid dashboard
+
+#### Problem: Email Headers Issues
+
+**Cause**: Improper DKIM/SPF configuration
+
+**Solution**:
+- AWS SES: verify domain and add DKIM/SPF records to DNS
+- SendGrid: verify domain under Settings → Sender Authentication
+- Test SPF/DKIM with online tools
+
+### Sandbox vs Production
+
+#### AWS SES Sandbox Mode
+
+**When**: Development, testing
+
+**Limitations**:
+- Can only send to verified email addresses
+- Limited to 1 email/second
+- Max 200 emails/24 hours
+- No reputation tracking
+
+**Enable Production**:
+1. Go to AWS SES console → Account Dashboard
+2. Click "Request Production Access"
+3. Describe your use case
+4. AWS reviews and grants access (usually within 24 hours)
+
+#### SendGrid
+
+**When**: Use free tier for development, paid for production
+
+**Free Tier**:
+- 100 emails/day
+- Full API access
+- Ideal for testing
+
+**Upgrade to Paid**:
+1. Add payment method in Settings → Billing
+2. No restrictions on sender emails or volume
+
+### Rate Limits & Throttling
+
+#### AWS SES Rate Limits (Sandbox)
+- 1 email/second
+- 200 emails/24 hours
+- Burst capacity: 5 emails/second
+
+**Implementation** (in `src/lib/email.ts`):
+```typescript
+// Add this to prevent rate limit errors
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+await sleep(100); // Throttle to 10 emails/second
+```
+
+#### SendGrid Rate Limits
+- Free tier: 100 emails/day
+- Paid: No rate limits
+- Max burst: 300 emails/10 seconds
+
+**Implement Retry Logic**:
+```typescript
+async function sendEmailWithRetry(options: EmailOptions, maxAttempts = 3) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await sendEmail(options);
+    } catch (error) {
+      if (attempt === maxAttempts) throw error;
+      const backoff = Math.pow(2, attempt - 1) * 1000; // exponential backoff
+      await sleep(backoff);
+    }
+  }
+}
+```
+
+### Bounce Handling & Compliance
+
+#### AWS SES Bounce Handling
+
+1. **Enable SNS Notifications** (AWS Console):
+   - SES → Email Addresses → Select sender
+   - Set notifications for Bounces and Complaints
+
+2. **Webhook Handler**:
+   Create `app/api/webhooks/ses-bounces/route.ts`:
+   ```typescript
+   export async function POST(req: Request) {
+     const event = await req.json();
+     
+     if (event.messageType === "Bounce") {
+       const bounces = event.bounce.bouncedRecipients;
+       bounces.forEach((bounce: any) => {
+         logger.warn(`Email bounced: ${bounce.emailAddress}`);
+         // Mark user as inactive or notify admin
+       });
+     }
+     
+     if (event.messageType === "Complaint") {
+       const complaints = event.complaint.complainedRecipients;
+       complaints.forEach((complaint: any) => {
+         logger.error(`Complaint received: ${complaint.emailAddress}`);
+         // Unsubscribe user
+       });
+     }
+     
+     return NextResponse.json({ success: true });
+   }
+   ```
+
+#### SendGrid Bounce Handling
+
+1. **Enable Event Webhook**:
+   - Settings → Mail Send Settings → Event Webhook
+   - Set URL to `https://yourdomain.com/api/webhooks/sendgrid-events`
+
+2. **Webhook Handler**:
+   Create `app/api/webhooks/sendgrid-events/route.ts`:
+   ```typescript
+   export async function POST(req: Request) {
+     const events = await req.json();
+     
+     events.forEach((event: any) => {
+       if (event.event === "bounce") {
+         logger.warn(`Email bounced: ${event.email}`);
+       }
+       if (event.event === "dropped") {
+         logger.warn(`Email dropped: ${event.email}`);
+       }
+       if (event.event === "spamreport") {
+         logger.error(`Spam report: ${event.email}`);
+       }
+     });
+     
+     return NextResponse.json({ success: true });
+   }
+   ```
+
+### Security Best Practices
+
+1. **Never expose API keys**: Store in `.env`, never in version control
+2. **Use environment-specific senders**: Separate domains for dev/prod
+3. **Validate recipient emails**: Use Zod schema validation
+4. **Rate limit email sends**: Prevent email flooding attacks
+5. **Monitor bounce rates**: Unsubscribe users with persistent bounces
+6. **SPF/DKIM/DMARC**: Set up email authentication records
+7. **Sanitize HTML content**: Use `sanitize-html` for user-generated content
+
+### Database Integration (Future Enhancement)
+
+Store email logs in PostgreSQL:
+
+```sql
+CREATE TABLE email_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  to VARCHAR(255) NOT NULL,
+  subject TEXT NOT NULL,
+  provider VARCHAR(20) NOT NULL,
+  message_id VARCHAR(255),
+  status VARCHAR(20) NOT NULL,
+  error_message TEXT,
+  created_at TIMESTAMP DEFAULT now()
+);
+
+CREATE INDEX idx_email_logs_status ON email_logs(status);
+CREATE INDEX idx_email_logs_to ON email_logs(to);
+```
+
+Use Prisma schema:
+```prisma
+model EmailLog {
+  id        String   @id @default(cuid())
+  to        String
+  subject   String
+  provider  String
+  messageId String?
+  status    String
+  error     String?
+  createdAt DateTime @default(now())
+}
+```
+
+### Key Takeaways
+
+✅ **Transactional emails** are critical for user engagement and trust
+
+✅ **Choose SES for scale**, **SendGrid for simplicity**
+
+✅ **Use templates** for consistent, branded communication
+
+✅ **Monitor bounce rates** and implement retry logic
+
+✅ **Test in sandbox mode** before production
+
+✅ **Log all sends** for audit and debugging
+
+✅ **Handle rate limits** with exponential backoff
+
+✅ **Secure API keys** in environment variables
+
+---
+
 
