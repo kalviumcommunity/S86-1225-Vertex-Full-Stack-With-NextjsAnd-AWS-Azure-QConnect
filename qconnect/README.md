@@ -1,5 +1,59 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+**QConnect** — A full-stack medical appointment booking system built with Next.js, Prisma ORM, PostgreSQL, AWS/Azure cloud services, and comprehensive testing infrastructure.
+
+---
+
+## 📋 Quick Navigation
+
+### 🚀 Getting Started
+- [Running the Development Server](#getting-started)
+- [Installation & Setup](#getting-started)
+
+### 📚 Documentation
+- [Database Migrations & Seeding](#database-migrations-and-seeding-✅) - _In this README_
+- **[DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)** - _Navigation guide for all documentation_
+- **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)** - _Comprehensive migration workflows & production safety_
+- **[MIGRATIONS_AND_SEEDING.md](MIGRATIONS_AND_SEEDING.md)** - _Complete implementation evidence & testing_
+- **[MIGRATIONS_CHECKLIST.md](MIGRATIONS_CHECKLIST.md)** - _Deliverables checklist & verification_
+- **[DATABASE_IMPLEMENTATION_SUMMARY.md](DATABASE_IMPLEMENTATION_SUMMARY.md)** - _High-level overview_
+- [Unit Testing Guide](#unit-testing-jest--react-testing-library-✅)
+- [Integration Testing Guide](#integration-tests-for-api-routes)
+- [API Routes & Naming](#api-routes--naming-🧭)
+- [Cloud Database Configuration](#cloud-database-configuration-rds--azure-database-for-postgresql-☁️🐘)
+- [Transactions & Query Optimization](#transactions--query-optimization-🔧)
+- [Architecture Overview](ARCHITECTURE.md)
+
+### 🛠️ Core Features
+- Database migrations with Prisma
+- Reproducible data seeding
+- RESTful API with pagination & filtering
+- JWT authentication with refresh tokens
+- Email service integration (SendGrid, AWS SES, Azure)
+- File uploads to AWS S3 or Azure Blob Storage
+- Comprehensive test coverage
+- Docker support
+
+### 🗂️ Directory Structure
+```
+qconnect/
+├── app/                    # Next.js App Router
+├── src/
+│   ├── app/               # Pages & layouts
+│   ├── components/        # React components
+│   ├── context/           # React context
+│   ├── hooks/             # Custom hooks
+│   └── lib/               # Utilities & services
+├── prisma/                # Database schema & migrations
+├── __tests__/             # Unit & integration tests
+├── public/                # Static assets
+├── scripts/               # Utility scripts
+├── docs/                  # API documentation
+└── [config files]         # TypeScript, ESLint, Jest, etc.
+```
+
+---
+
 ## Getting Started
 
 First, run the development server:
@@ -105,34 +159,321 @@ npx jest "__tests__/api"
 
 ## Database Migrations and Seeding ✅
 
-This project uses Prisma for database schema migrations and reproducible seeding.
+This project uses **Prisma ORM** for reproducible database migrations and idempotent data seeding. Migrations capture schema changes as versioned SQL files, ensuring your entire team and all deployment environments share the same database structure.
 
-### Key commands
+### Quick Start
 
-- Create & apply a migration (development):
-  - npx prisma migrate dev --name init_schema
-  - or: npm run migrate:dev
+```bash
+# 1. Apply all pending migrations + seed data
+npm run migrate:dev
+npm run db:seed
 
-- Reset the database (drops, re-applies migrations, optional seed):
-  - npx prisma migrate reset
-  - or: npm run migrate:reset
+# 2. Inspect data visually
+npm run prisma:studio
+# Opens http://localhost:5555
 
-- Seed the database (idempotent upserts):
-  - npx prisma db seed
-  - or: npm run db:seed
-  - Seed script: `prisma/seed.ts` (uses `upsert` and `Role` enum — safe to re-run)
+# 3. View your data
+# Check Users, Doctors, Queues, Appointments, Files in the UI
+```
 
-- Open Prisma Studio to inspect data:
-  - npx prisma studio
-  - or: npm run prisma:studio
+### Migration Workflow
 
-### Notes & Best Practices ⚠️
+#### Step 1: Modify Your Schema
 
-- Idempotency: The seed script uses `upsert` so re-running won't create duplicates; it also updates key fields to keep data consistent.
-- Rollback and Production Safety: Always backup production databases and test migrations in staging before applying them to production. Consider taking a DB snapshot or creating backups as part of your deployment pipeline.
-- Logging: When you run migrations and seeds locally, capture terminal output or screenshots and attach them to the project README for traceability.
+Edit `prisma/schema.prisma`:
 
-If you want, run the commands locally and paste the migration & seed logs here — I can add them to this README for documentation and verification.
+```prisma
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  phone     String?        // New field
+  password  String?        // New field
+  role      Role
+  createdAt DateTime  @default(now())
+}
+```
+
+#### Step 2: Create a Migration
+
+```bash
+# Generates a timestamped SQL file and applies it
+npm run migrate:dev -- --name add_phone_field
+
+# Or manually:
+npx prisma migrate dev --name add_phone_field
+```
+
+Prisma will:
+1. Compare your schema with the database
+2. Generate SQL in `prisma/migrations/<timestamp>_add_phone_field/migration.sql`
+3. Apply the migration automatically
+4. Update the Prisma Client
+
+#### Step 3: Review Generated SQL
+
+Always verify the generated migration:
+
+```bash
+cat prisma/migrations/20251217095346_add_user_phone/migration.sql
+
+# Output:
+# -- AlterTable
+# ALTER TABLE "User" ADD COLUMN "phone" TEXT;
+```
+
+#### Step 4: Commit & Push
+
+```bash
+git add prisma/migrations/
+git add prisma/schema.prisma
+git commit -m "feat: add phone field to User model"
+git push
+```
+
+#### Step 5: Team Applies Migration
+
+Your teammates pull changes and apply:
+
+```bash
+npm install
+npm run migrate:dev
+```
+
+### Current Migrations
+
+| ID | Date | Migration | Purpose |
+|----|------|-----------|---------|
+| 1 | 2025-12-17 | `20251217083615_init_schema` | Initial schema (User, Doctor, Queue, Appointment, File, RefreshToken) |
+| 2 | 2025-12-17 | `20251217095346_add_user_phone` | Added phone field to User |
+| 3 | 2025-12-23 | `20251223120000_add_indexes` | Added performance indexes (specialty, doctorId+date, userId, status) |
+| 4 | 2025-12-23 | `20251223150000_add_user_password` | Added password field to User |
+
+### Data Seeding
+
+The seed script (`prisma/seed.ts`) populates your database with reproducible test data using **idempotent upserts** (won't create duplicates):
+
+```typescript
+// Example: upsert ensures it won't duplicate
+await prisma.user.upsert({
+  where: { email: 'alice@example.com' },
+  update: { name: 'Alice' },
+  create: { name: 'Alice', email: 'alice@example.com', role: Role.PATIENT }
+});
+```
+
+#### Run Seed Immediately
+
+```bash
+npm run db:seed
+
+# Output:
+# 🌱 Starting database seeding...
+# 
+# 📝 Seeding Users...
+#   ✓ Alice Johnson (alice@example.com)
+#   ✓ Bob Smith (bob@example.com)
+#   ✓ Charlie Brown (charlie@example.com)
+#   ✓ Diana Prince (diana@example.com)
+#   ✓ Admin User (admin@example.com)
+# 
+# 👨‍⚕️ Seeding Doctors...
+#   ✓ Dr. Smith - Cardiology (Room A101)
+#   ✓ Dr. Johnson - Neurology (Room B202)
+#   ✓ Dr. Williams - Orthopedics (Room C303)
+#   ✓ Dr. Brown - Dermatology (Room D404)
+# 
+# 📋 Seeding Queues...
+#   ✓ Queue for Dr. Smith on 1/18/2026
+#   ✓ Queue for Dr. Johnson on 1/19/2026
+#   ✓ Queue for Dr. Williams on 1/20/2026
+#   ✓ Queue for Dr. Brown on 1/21/2026
+# 
+# 🗓️ Seeding Appointments...
+#   ✓ Appointment #1 for Alice Johnson - Status: PENDING
+#   ✓ Appointment #2 for Bob Smith - Status: PENDING
+#   ✓ Appointment #3 for Charlie Brown - Status: IN_PROGRESS
+#   ✓ Appointment #1 for Diana Prince - Status: COMPLETED
+# 
+# 📁 Seeding Files...
+#   ✓ prescription_1.pdf (244.14 KB)
+#   ✓ medical_report.pdf (439.45 KB)
+#   ✓ lab_results.xlsx (117.19 KB)
+# 
+# ✅ Database seeding completed successfully!
+# 
+# 📊 Summary:
+#   • Users: 5
+#   • Doctors: 4
+#   • Queues: 4
+#   • Appointments: 4
+#   • Files: 3
+```
+
+#### Verify Idempotency
+
+Run the seed twice to confirm no duplicates:
+
+```bash
+npm run db:seed
+npm run db:seed
+# Second run: Updates existing records, doesn't create duplicates
+```
+
+#### Inspect Seeded Data
+
+```bash
+# Visual UI
+npm run prisma:studio
+
+# Or use PostgreSQL:
+psql -h localhost -U postgres -d qconnect_db
+SELECT COUNT(*) FROM "User";           -- 5
+SELECT COUNT(*) FROM "Doctor";         -- 4
+SELECT COUNT(*) FROM "Appointment";    -- 4
+```
+
+### Advanced: Reset Everything
+
+To start fresh locally (drops DB, re-applies all migrations, runs seed):
+
+```bash
+npm run migrate:reset
+
+# Output:
+# ⚠️  Would you like to continue? … yes
+# 
+# Prisma Migrate reset
+# 
+# Dropped the database 'qconnect_db' (1 migrations)
+# Created the database 'qconnect_db'
+# 
+# Running 4 migrations in the database:
+#   ✓ 20251217083615_init_schema
+#   ✓ 20251217095346_add_user_phone
+#   ✓ 20251223120000_add_indexes
+#   ✓ 20251223150000_add_user_password
+# 
+# 🌱 Starting database seeding...
+# [seed output as above]
+```
+
+### Rollback & Recovery
+
+#### Option 1: Rollback Locally (Safe)
+
+```bash
+npm run migrate:reset
+# Drops everything and reapplies all migrations + seed
+```
+
+#### Option 2: Manual Rollback (Advanced)
+
+If a migration fails to apply:
+
+```bash
+npx prisma migrate resolve --rolled-back <migration_name>
+# Example:
+npx prisma migrate resolve --rolled-back 20251223150000_add_user_password
+```
+
+#### Option 3: Create a Rollback Migration
+
+For production, create a new migration that reverses changes:
+
+```prisma
+# In schema.prisma, remove the field
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  # phone removed
+  role      Role
+  createdAt DateTime  @default(now())
+}
+```
+
+Then:
+
+```bash
+npm run migrate:dev -- --name remove_phone_field
+# Generates SQL to drop the column
+```
+
+### Production Safety & Best Practices ⚠️
+
+**CRITICAL:** Never run `migrate dev` or `migrate reset` on production.
+
+#### Safe Production Workflow:
+
+1. **Test locally:**
+   ```bash
+   npm run migrate:dev
+   npm run db:seed
+   ```
+
+2. **Test in staging:**
+   ```bash
+   # In staging environment
+   npx prisma migrate deploy
+   ```
+
+3. **Backup production:**
+   ```bash
+   # AWS RDS
+   aws rds create-db-snapshot \
+     --db-instance-identifier qconnect-prod \
+     --db-snapshot-identifier qconnect-prod-backup-20260117
+
+   # Or PostgreSQL:
+   pg_dump postgresql://user:pass@prod-host:5432/qconnect_prod > backup_20260117.sql
+   ```
+
+4. **Apply to production:**
+   ```bash
+   # Only applies existing migrations (doesn't create new ones)
+   npx prisma migrate deploy
+   ```
+
+5. **Verify:**
+   ```bash
+   npx prisma migrate status
+   ```
+
+#### Connection Pooling (High Traffic)
+
+For serverless or high-concurrency:
+
+```env
+# .env.production
+DATABASE_URL=postgresql://user:pass@pgbouncer-host:6432/qconnect_db
+```
+
+### Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| `Error: P3008 - Migration cannot be applied` | Check DB connection: `npm run check:db` |
+| Migration stuck | View status: `npx prisma migrate status` |
+| Can't connect to PostgreSQL | Start DB: `docker-compose up -d postgres` |
+| Schema conflicts after merge | Pull latest: `git pull origin main` then `npm run migrate:dev` |
+
+### More Information
+
+For detailed migration workflows, production safety, disaster recovery, and advanced seeding strategies, see **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)**.
+
+### Key Commands Reference
+
+```bash
+npm run migrate:dev           # Create + apply migration (dev only)
+npm run migrate:reset         # Drop + reapply all + seed (dev only)
+npm run db:seed               # Run seed script on existing DB
+npm run prisma:studio         # Open visual data inspector
+npm run check:db              # Test database connection
+
+npx prisma migrate status     # Check pending migrations
+npx prisma migrate deploy     # Apply pending (production-safe)
+```
 
 ---
 
