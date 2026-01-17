@@ -568,6 +568,388 @@ docker build -t <ECR_REPO>:local-test .
 - Replace the Deploy placeholder with actual deployment steps (AWS CLI / ECS deploy or Azure Web App), or trigger `deploy-ecs.yml` from this workflow via a repository dispatch.
 - Add parallel jobs for lint and tests to reduce CI runtime.
 
+---
+
+## GitHub Actions CI/CD Pipeline 🚀 (Week 3)
+
+This project includes a comprehensive **GitHub Actions CI/CD pipeline** that automates code quality checks, testing, building, and deployment. Every push or pull request triggers an automated workflow to validate that code meets standards before merging.
+
+### Quick Links
+- **Detailed CI/CD Guide**: See [CI_CD_PIPELINE.md](CI_CD_PIPELINE.md) for comprehensive documentation
+- **Workflow File**: [.github/workflows/ci.yml](.github/workflows/ci.yml)
+- **Test Reports**: After push/PR, view results in **GitHub → Actions → CI Pipeline**
+
+### Pipeline Overview
+
+The CI/CD pipeline executes **4 main stages** in sequence, with quality gates at each step:
+
+```
+Push/PR → Lint ✅ → (Test + Build + Integration Tests in parallel) → Deploy (main only) ✅
+```
+
+#### Stage 1: LINT 🔍
+- **Purpose**: Validate code style and syntax
+- **Checks**:
+  - ESLint: code style consistency
+  - TypeScript: type safety verification
+- **Failure**: Blocks entire pipeline if lint fails
+- **Duration**: ~30-45 seconds
+
+**Run locally**:
+```bash
+npm run lint           # Run ESLint
+npm run type-check    # Run TypeScript check
+```
+
+#### Stage 2: TEST ✅
+- **Purpose**: Run unit tests and verify coverage
+- **Coverage Requirements**: 80%+ global coverage (lines, branches, functions, statements)
+- **Tests Included**:
+  - Unit tests (80+ tests for utilities, logger, monitoring)
+  - API integration tests (email, contact, users endpoints)
+- **Artifacts**: Coverage reports uploaded to Codecov
+- **Duration**: ~20-30 seconds
+
+**Run locally**:
+```bash
+npm test                          # Run all tests
+npm test -- --coverage           # Run with coverage report
+npm test -- __tests__/api        # Run only API tests
+```
+
+#### Stage 3: BUILD 🏗️
+- **Purpose**: Verify Next.js production build succeeds
+- **Checks**:
+  - TypeScript compilation
+  - All imports resolve correctly
+  - No syntax errors
+  - API routes validate
+  - Next.js optimization passes
+- **Artifacts**: Built `.next/` directory stored for 30 days
+- **Duration**: ~45-60 seconds
+
+**Run locally**:
+```bash
+npm run build    # Build for production
+```
+
+#### Stage 4: DEPLOY 🚀 (main branch only)
+- **Purpose**: Deploy to production after all checks pass
+- **When**: Only on push to `main` branch (not on PRs)
+- **Prerequisites**: All previous stages must pass
+- **Steps**:
+  1. Verify build was successful
+  2. Run deployment steps (placeholder, configure for AWS/Azure)
+  3. Health checks
+  4. Generate deployment summary
+- **Duration**: ~30-45 seconds
+
+### Workflow Triggers
+
+The pipeline automatically triggers in these scenarios:
+
+```yaml
+on:
+  push:
+    branches: [main, develop]      # On commits to main/develop
+  pull_request:
+    branches: [main, develop]      # On PR creation/updates
+  workflow_dispatch:               # Manual trigger via GitHub UI
+```
+
+#### Scenario Examples
+
+**1. Feature Development** (on feature branch)
+```bash
+git push origin feature/new-api
+# → GitHub detects PR against main/develop
+# → Pipeline runs automatically
+# → Results shown in PR checks
+# → Must pass before merge
+```
+
+**2. Code Merge** (push to main)
+```bash
+git merge feature/new-api          # Creates local merge
+git push origin main               # Push to main
+# → Pipeline runs Lint → Test → Build → Deploy
+# → Deploy stage activates (only on main)
+# → Auto-deployment to production
+```
+
+**3. Manual Trigger**
+- Go to **GitHub → Actions → CI Pipeline**
+- Click **Run workflow**
+- Select branch and click **Run**
+
+### Adding GitHub Secrets
+
+The pipeline can use secrets for credentials (AWS, Azure, Slack, etc.):
+
+**Add a Secret**:
+1. Go to **Repository Settings → Secrets and Variables → Actions**
+2. Click **New repository secret**
+3. Enter:
+   ```
+   Name: AWS_ACCESS_KEY_ID
+   Value: AKIAIOSFODNN7EXAMPLE
+   ```
+4. Click **Add secret**
+
+**Required Secrets** (if deploying to AWS):
+| Secret | Usage | Example |
+|--------|-------|---------|
+| `AWS_REGION` | AWS region | `us-east-1` |
+| `AWS_ACCESS_KEY_ID` | AWS authentication | `AKIA...` |
+| `AWS_SECRET_ACCESS_KEY` | AWS authentication | `wJalr...` |
+| `AWS_BUCKET_NAME` | S3 bucket | `my-app-bucket` |
+| `SLACK_WEBHOOK` | Slack notifications | `https://hooks.slack.com/...` |
+
+### Monitoring Pipeline Runs
+
+**View Pipeline Results**:
+1. Go to **GitHub → Actions** tab
+2. Select **CI Pipeline**
+3. Click a workflow run
+4. View logs for each job
+
+**Understanding Status**:
+- ✅ **Green checkmark**: Job passed
+- ❌ **Red X**: Job failed
+- 🟡 **Yellow circle**: Job in progress
+- ⊘ **Dash**: Job skipped (condition not met)
+
+**View Step Details**:
+- Click on a job name
+- Expand any step to see logs
+- Search logs for errors
+
+**Example**: Debug a test failure
+```
+Actions → CI Pipeline → [Run ID] → test → npm test
+→ See which test failed
+→ Fix locally: npm test -- failing.test.ts
+→ Commit and push again
+```
+
+### Caching Strategy
+
+The pipeline uses **npm caching** to speed up installs:
+
+```yaml
+- uses: actions/setup-node@v4
+  with:
+    cache: 'npm'    # Caches node_modules
+```
+
+**Benefits**:
+- ⚡ **50-70% faster** npm installs
+- 💾 **Reduces bandwidth** usage
+- 🔒 **Ensures consistency** across runs
+
+**Cache hits**: Automatic when `package-lock.json` hasn't changed
+
+### Adding a Coverage Badge
+
+Display coverage status in your README:
+
+```markdown
+![CI Pipeline](https://github.com/YOUR-ORG/YOUR-REPO/actions/workflows/ci.yml/badge.svg)
+```
+
+Result: Shows a green "passing" or red "failing" badge
+
+### Configuring Branch Protection
+
+Enforce CI passing before merge:
+
+1. Go to **Settings → Branches**
+2. Click **Add rule** under Branch protection rules
+3. Select `main` as branch pattern
+4. Check:
+   - ✅ "Require status checks to pass before merging"
+   - ✅ "Require branches to be up to date before merging"
+5. Select status checks:
+   - ✅ lint
+   - ✅ test
+   - ✅ build
+6. Click **Create** / **Update**
+
+**Effect**: PRs cannot merge until pipeline passes
+
+### Performance Statistics
+
+**Current Pipeline Performance**:
+
+| Stage | Duration | Node Cache | Dependencies |
+|-------|----------|-----------|--------------|
+| Lint | ~30-45s | — | Already installed |
+| Test | ~20-30s | ✅ Cache hit | Test runs only |
+| Build | ~45-60s | ✅ Cache hit | Next.js compile |
+| Deploy | ~30-45s | — | Custom steps |
+| **Total** | **~2-3 minutes** | ✅ Optimized | Parallel jobs |
+
+**Optimization Tips**:
+- ✅ Caching reduces install time significantly
+- ✅ Parallel jobs (test, build run together) save ~30-45s
+- ✅ Integration tests run in separate optional job
+- ✅ Deploy only on main branch (saves time on feature branches)
+
+### Common Workflow Patterns
+
+**Pattern 1: Feature Development**
+```bash
+# Local
+git checkout -b feature/user-auth
+# ... code changes ...
+npm run lint && npm test && npm run build   # Test locally first!
+
+# Push
+git push origin feature/user-auth
+
+# GitHub
+# → Create PR
+# → Pipeline runs automatically
+# → View results in PR checks
+# → Address any failures
+# → Merge when all checks pass
+```
+
+**Pattern 2: Hotfix to Production**
+```bash
+# Local
+git checkout main
+git pull origin main
+git checkout -b hotfix/critical-bug
+# ... urgent fix ...
+npm run lint && npm test
+
+# Push & merge
+git push origin hotfix/critical-bug
+# → Create PR with "HOTFIX:" prefix
+# → Get fast review
+# → Merge to main
+# → Deploy stage automatically runs
+# → Fix live in production
+```
+
+**Pattern 3: Bulk Dependency Updates**
+```bash
+# Local
+npm update
+npm audit fix
+npm run lint && npm test   # Verify no breaking changes!
+
+# Push
+git push origin deps/security-update
+# → Pipeline validates all updates
+# → Coverage must stay >= 80%
+# → Build must succeed
+# → Only then can merge
+```
+
+### Troubleshooting Pipeline Issues
+
+**Problem: ESLint Fails**
+```
+ERROR: code ESLINTFAILURE
+```
+
+**Solution**:
+```bash
+# Fix locally
+npm run lint -- --fix
+git add .
+git commit -m "style: fix linting issues"
+git push
+```
+
+---
+
+**Problem: Coverage Below Threshold**
+```
+ERROR: Coverage threshold not met: 80%
+```
+
+**Solution**:
+```bash
+# Check coverage locally
+npm test -- --coverage
+
+# Write more tests to reach 80%
+# Update or create test files
+
+# Verify locally before pushing
+npm test -- --coverage
+```
+
+---
+
+**Problem: Build Fails with "Command not found"**
+```
+ERROR: npm ERR! code ENOENT: command not found
+```
+
+**Solution**:
+```bash
+# Verify npm scripts in package.json
+npm run build    # Test locally first!
+
+# Check for missing dependencies
+npm install
+
+# Rebuild and test
+npm run build
+```
+
+---
+
+**Problem: Deployment Doesn't Trigger**
+```
+Deploy step skipped: condition not met
+```
+
+**Check**:
+- ✅ Pushed to `main` branch (not `develop`)
+- ✅ Used `git push` (not merged PR)
+- ✅ All previous stages passed (check workflow logs)
+
+---
+
+**Problem: Secrets Not Found**
+```
+ERROR: ${{ secrets.AWS_REGION }} is not defined
+```
+
+**Solution**:
+1. Go to **Settings → Secrets and Variables → Actions**
+2. Verify secret name matches exactly
+3. Use default if optional:
+   ```yaml
+   AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+   ```
+
+---
+
+### Next Steps
+
+✅ **Immediate**:
+1. Review [CI_CD_PIPELINE.md](CI_CD_PIPELINE.md) for detailed documentation
+2. Monitor pipeline runs: **GitHub → Actions → CI Pipeline**
+3. Add repository secrets if deploying to AWS/Azure
+
+✅ **Short Term**:
+1. Configure branch protection rules (require status checks)
+2. Add coverage badge to README
+3. Test with a feature branch PR
+
+✅ **Long Term**:
+1. Integrate deployment steps (AWS ECS, Azure, Vercel)
+2. Add Slack notifications for failures
+3. Implement E2E test stage
+4. Monitor performance metrics
+
+---
 
 ## Domain & SSL (Route 53 + ACM) 🔒
 
