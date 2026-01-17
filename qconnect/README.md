@@ -795,48 +795,210 @@ Notes:
 
 ## API Routes & Naming (app/api) 🧭
 
-I added RESTful CRUD endpoints for the primary resources (users, doctors, queues, appointments) under `app/api`.
+QConnect follows **RESTful API best practices** with well-organized, predictable endpoints using file-based routing in Next.js App Router. All API endpoints are organized under `app/api/` with a consistent structure, naming conventions, and response format.
 
-### Route hierarchy
+### Quick Reference
 
-- /api/users (GET paginated, POST create)
-- /api/users/[id] (GET, PATCH, DELETE)
-- /api/doctors (GET paginated, POST create)
-- /api/doctors/[id] (GET, PATCH, DELETE)
-- /api/queues (GET paginated, optional filter by doctorId, POST create)
-- /api/queues/[id] (GET, PATCH, DELETE)
-- /api/appointments (GET paginated + filters, POST creates appointment atomically)
-- /api/appointments/[id] (GET, PATCH, DELETE)
+| Resource | List | Detail | Create | Update | Delete |
+|----------|------|--------|--------|--------|--------|
+| **Users** | `GET /api/users` | `GET /api/users/[id]` | `POST /api/users` | `PATCH /api/users/[id]` | `DELETE /api/users/[id]` |
+| **Doctors** | `GET /api/doctors` | `GET /api/doctors/[id]` | `POST /api/doctors` | `PATCH /api/doctors/[id]` | `DELETE /api/doctors/[id]` |
+| **Appointments** | `GET /api/appointments` | `GET /api/appointments/[id]` | `POST /api/appointments` | `PATCH /api/appointments/[id]` | `DELETE /api/appointments/[id]` |
+| **Auth** | — | `GET /api/auth/me` | `POST /api/auth/signup` / `POST /api/auth/login` | — | — |
 
-### Pagination & filtering
-- List endpoints accept `page` and `limit` query params. Example: `/api/users?page=2&limit=20`.
-- `/api/users?q=alice` performs simple name/email search.
-- `/api/queues?doctorId=1` filters queues by doctor.
-- `/api/appointments?queueId=2&status=PENDING` filters appointments.
+### Route Hierarchy
 
-### Status codes & error handling
-- 200 OK for successful GET/PATCH/DELETE (where applicable)
-- 201 Created for POST
-- 400 Bad Request for invalid inputs
-- 404 Not Found when resource missing
-- 500 Internal when unexpected errors occur
+```
+app/api/
+├── users/
+│   ├── route.ts           # GET all (paginated), POST create
+│   └── [id]/route.ts      # GET by ID, PATCH update, DELETE
+├── doctors/
+│   ├── route.ts           # GET all (paginated), POST create
+│   └── [id]/route.ts      # GET by ID, PATCH update, DELETE
+├── appointments/
+│   ├── route.ts           # GET all (paginated, filterable), POST create
+│   └── [id]/route.ts      # GET by ID, PATCH update, DELETE
+├── auth/
+│   ├── login/route.ts     # POST login
+│   ├── signup/route.ts    # POST signup
+│   └── me/route.ts        # GET current user
+├── email/route.ts         # Email notifications
+├── queues/route.ts        # Queue management
+├── files/route.ts         # File operations
+├── upload/route.ts        # File uploads
+├── security/route.ts      # Security operations
+└── admin/route.ts         # Admin-only endpoints
+```
 
-### Sample curl requests
+### Naming Conventions ✅
 
-- Get users (first page):
-  - curl -s "http://localhost:3000/api/users?page=1&limit=10"
-- Create user:
-  - curl -X POST -H "Content-Type: application/json" -d '{"name":"Charlie","email":"charlie@example.com"}' http://localhost:3000/api/users
-- Create appointment (atomic):
-  - curl -X POST -H "Content-Type: application/json" -d '{"queueId":1,"userId":1}' http://localhost:3000/api/appointments
-- Update a resource:
-  - curl -X PATCH -H "Content-Type: application/json" -d '{"phone":"9999999999"}' http://localhost:3000/api/users/1
+- ✅ **Use plural nouns**: `/api/users`, not `/api/user` or `/api/getUsers`
+- ✅ **Lowercase, consistent**: `/api/appointments`, `/api/doctors`
+- ✅ **Resource-based**: No verbs in routes (REST principle)
+- ✅ **Hierarchical for relationships**: `/api/users/[id]/appointments` (if needed)
 
-### Testing tips
-- Use Postman or curl to test endpoints and verify proper status codes, JSON responses, pagination and error handling.
-- For the appointment POST, the API uses a transaction: the appointment create + queue increment are atomic (see `src/lib/appointmentService.ts` and `prisma/transactionDemo.ts`).
+### Pagination & Filtering
 
-If you'd like, I can also add an automated Postman collection file or example responses to the README — would you prefer a Postman collection export or simple curl examples (already included)?
+All list endpoints support uniform pagination and filtering:
+
+```bash
+# Pagination
+GET /api/users?page=1&limit=10
+
+# Search
+GET /api/users?q=alice&page=1&limit=10
+
+# Filtered by status
+GET /api/appointments?status=PENDING&page=1&limit=20
+
+# Multiple filters
+GET /api/appointments?queueId=2&userId=10&status=CONFIRMED&page=1&limit=10
+```
+
+Query parameters:
+- `page` (default: 1) — Which page to retrieve
+- `limit` (default: 10, max: 100) — Results per page
+- `q` (optional) — Search query (name, email, etc.)
+- Resource-specific filters (e.g., `status`, `queueId`, `userId`)
+
+### HTTP Status Codes & Error Handling
+
+| Code | Meaning | Usage |
+|------|---------|-------|
+| **200** | OK | Successful GET, PATCH, DELETE |
+| **201** | Created | Successful POST (resource created) |
+| **400** | Bad Request | Invalid input, validation errors |
+| **401** | Unauthorized | Missing/invalid authentication |
+| **403** | Forbidden | Authenticated but no permission (RBAC) |
+| **404** | Not Found | Resource doesn't exist |
+| **500** | Internal Server Error | Unexpected server error |
+
+### Sample curl Requests
+
+**Fetch users (paginated):**
+```bash
+curl -X GET "http://localhost:3000/api/users?page=1&limit=10" \
+  -H "x-user-email: admin@example.com" \
+  -H "x-user-role: admin"
+```
+
+**Search users by name:**
+```bash
+curl -X GET "http://localhost:3000/api/users?q=alice&page=1&limit=5"
+```
+
+**Create a new user:**
+```bash
+curl -X POST "http://localhost:3000/api/users" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Charlie Brown",
+    "email": "charlie@example.com",
+    "phone": "+9876543210",
+    "password": "SecurePass123!"
+  }'
+```
+
+**Create appointment (uses atomic transaction):**
+```bash
+curl -X POST "http://localhost:3000/api/appointments" \
+  -H "Content-Type: application/json" \
+  -d '{"userId": 10, "queueId": 2}'
+```
+
+**Update a resource:**
+```bash
+curl -X PATCH "http://localhost:3000/api/users/1" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Alice J.", "phone": "+1111111111"}'
+```
+
+**Delete a resource (with authorization):**
+```bash
+curl -X DELETE "http://localhost:3000/api/users/1" \
+  -H "x-user-email: admin@example.com" \
+  -H "x-user-id: 1" \
+  -H "x-user-role: admin"
+```
+
+### Response Format
+
+**Success Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "page": 1,
+    "limit": 10,
+    "total": 42,
+    "data": [{ "id": 1, "name": "Alice" }]
+  },
+  "message": "Users fetched successfully",
+  "code": "SUCCESS"
+}
+```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "error": "Validation Error",
+  "code": "VALIDATION_ERROR",
+  "statusCode": 400,
+  "details": [{ "field": "email", "message": "Invalid email" }]
+}
+```
+
+### Why Consistency Matters 🎯
+
+1. **Predictability** — Developers can guess endpoints without memorizing documentation
+2. **Reduced Errors** — Uniform patterns prevent integration mistakes
+3. **Maintainability** — New developers onboard faster with consistent structure
+4. **Scalability** — Adding new resources follows the same pattern
+5. **Self-Documenting** — Endpoints are intuitive and easy to integrate
+
+### Key Features Implemented
+
+✅ **Atomic Transactions** — Appointment creation uses database transactions for consistency  
+✅ **Caching Strategy** — List endpoints cache results via Redis (TTL: 60 seconds)  
+✅ **RBAC Integration** — Authorization headers and permission checks on sensitive operations  
+✅ **Pagination Built-In** — All list endpoints support `page` and `limit`  
+✅ **Search/Filter Support** — Query strings for dynamic filtering  
+✅ **Error Codes** — Custom error codes for easier client-side error handling  
+✅ **Validation** — Zod schema validation with field-level error messages  
+
+### Comprehensive Documentation
+
+For detailed endpoint documentation, request/response examples, and testing instructions, see:
+
+- **[API_ROUTES_DOCUMENTATION.md](API_ROUTES_DOCUMENTATION.md)** — Complete endpoint reference with examples
+- **[API_TEST_EVIDENCE.md](API_TEST_EVIDENCE.md)** — Comprehensive curl commands and test scenarios
+- **[docs/postman_collection.json](docs/postman_collection.json)** — Postman collection for testing
+
+### Testing Your Routes
+
+#### Using curl (included in API_TEST_EVIDENCE.md)
+
+Run any of the examples above to test endpoints locally.
+
+#### Using Postman
+
+1. Import `docs/postman_collection.json` into Postman
+2. Set environment variable `base_url` to `http://localhost:3000`
+3. Test endpoints and validate responses
+
+#### Unit & Integration Tests
+
+Integration tests for API routes are located in `__tests__/api/`:
+
+```bash
+# Run all API tests
+npm test -- __tests__/api
+
+# Run tests with coverage
+npm run test:coverage
+```
 
 ---
 
