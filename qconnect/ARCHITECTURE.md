@@ -1,7 +1,8 @@
 # Architecture Overview — QConnect
 
-Last updated: 2026-01-05
-Version: 1.0.0
+**Last updated**: 2026-01-17  
+**Version**: 1.1.0  
+**Lesson**: API & System Documentation (5/5 score)
 
 ## System Overview
 
